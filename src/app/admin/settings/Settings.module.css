@@ -1,0 +1,50 @@
+.section {
+  margin-bottom: var(--space-xl);
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+}
+
+.commissionRow {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-end;
+}
+
+.inputWrap {
+  flex: 1;
+  max-width: 240px;
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-md);
+}
+
+.artistList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.artistRow {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+@media (max-width: 640px) {
+  .commissionRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .artistRow {
+    grid-template-columns: 1fr;
+  }
+}

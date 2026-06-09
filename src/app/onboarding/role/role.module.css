@@ -1,0 +1,41 @@
+.page {
+  padding: var(--space-2xl) 0;
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 480px;
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xl);
+}
+
+.option {
+  display: flex;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.option input {
+  margin-top: 0.25rem;
+}
+
+.option p {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-xs);
+}
+
+.selected {
+  border-color: var(--color-primary);
+  background: var(--status-completed-bg);
+}
