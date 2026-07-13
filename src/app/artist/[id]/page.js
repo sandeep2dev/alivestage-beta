@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
-import { createClient } from '@/lib/supabase/client';
+import { getAccessToken } from '@/lib/auth';
 import styles from './artist.module.css';
 
 export default function ArtistProfilePage() {
@@ -35,11 +35,13 @@ export default function ArtistProfilePage() {
       }
     }
     async function loadProfile() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-        setProfile(data);
+      const token = getAccessToken();
+      if (!token) return;
+      try {
+        const data = await apiFetch('/api/auth/me', { token });
+        setProfile(data.profile);
+      } catch {
+        setProfile(null);
       }
     }
     load();
@@ -56,9 +58,8 @@ export default function ArtistProfilePage() {
     setSubmitting(true);
     setError('');
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const token = getAccessToken();
+      if (!token) {
         router.push('/auth');
         return;
       }
@@ -69,7 +70,7 @@ export default function ArtistProfilePage() {
 
       const result = await apiFetch('/api/bookings/create', {
         method: 'POST',
-        token: session.access_token,
+        token,
         body: {
           artistId: id,
           eventDetails: booking.eventDetails,
@@ -82,7 +83,7 @@ export default function ArtistProfilePage() {
       if (result.mock) {
         await apiFetch('/api/bookings/verify-token', {
           method: 'POST',
-          token: session.access_token,
+          token,
           body: {
             bookingId: result.bookingId,
             razorpay_order_id: result.orderId,
@@ -104,7 +105,7 @@ export default function ArtistProfilePage() {
         onSuccess: async (response) => {
           await apiFetch('/api/bookings/verify-token', {
             method: 'POST',
-            token: session.access_token,
+            token,
             body: {
               bookingId: result.bookingId,
               razorpay_order_id: response.razorpay_order_id,

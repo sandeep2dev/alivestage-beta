@@ -12,17 +12,21 @@
     "test:integration": "node scripts/test-integration.js"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
     "concurrently": "^9.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
     "next": "16.2.7",
     "node-cron": "^3.0.3",
     "nodemailer": "^7.0.3",
     "razorpay": "^2.9.6",
     "react": "19.2.4",
     "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "supabase": "^2.109.1"
   }
 }

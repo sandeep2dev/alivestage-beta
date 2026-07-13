@@ -2,17 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { apiFetch } from '@/lib/api';
+import { getAccessToken } from '@/lib/auth';
 import styles from './onboarding.module.css';
 
 const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Folk', 'Bollywood'];
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function OnboardingWizard() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [userId, setUserId] = useState(null);
   const [form, setForm] = useState({
     bio: '',
     city: '',
@@ -25,16 +34,18 @@ export default function OnboardingWizard() {
 
   useEffect(() => {
     async function check() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const token = getAccessToken();
+      if (!token) {
         router.push('/auth');
         return;
       }
-      setUserId(user.id);
-      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-      if (profile?.role !== 'artist') {
-        router.push('/');
+      try {
+        const data = await apiFetch('/api/auth/me', { token });
+        if (data.profile?.role !== 'artist') {
+          router.push('/');
+        }
+      } catch {
+        router.push('/auth');
       }
     }
     check();
@@ -59,35 +70,25 @@ export default function OnboardingWizard() {
     setForm({ ...form, youtubeLinks: [...form.youtubeLinks, ''] });
   }
 
-  async function uploadAvatar(file) {
-    const supabase = createClient();
-    const ext = file.name.split('.').pop();
-    const path = `${userId}/avatar.${ext}`;
-    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: true });
-    if (uploadError) throw uploadError;
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-    return data.publicUrl;
-  }
-
   async function saveStep1(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const supabase = createClient();
-      let avatarUrl = form.avatarUrl;
+      const token = getAccessToken();
+      const body = { bio: form.bio, city: form.city };
       const fileInput = document.getElementById('avatar');
       if (fileInput?.files?.[0]) {
-        avatarUrl = await uploadAvatar(fileInput.files[0]);
+        const file = fileInput.files[0];
+        body.avatarBase64 = await fileToBase64(file);
+        body.avatarFileName = file.name;
       }
-      await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('id', userId);
-      await supabase.from('artist_details').upsert({
-        id: userId,
-        bio: form.bio,
-        city: form.city,
-        updated_at: new Date().toISOString(),
+      const data = await apiFetch('/api/auth/onboarding/step1', {
+        method: 'POST',
+        token,
+        body,
       });
-      setForm((prev) => ({ ...prev, avatarUrl }));
+      setForm((prev) => ({ ...prev, avatarUrl: data.avatarUrl || prev.avatarUrl }));
       setStep(2);
     } catch (err) {
       setError(err.message);
@@ -101,13 +102,15 @@ export default function OnboardingWizard() {
     setLoading(true);
     setError('');
     try {
-      const supabase = createClient();
-      const links = form.youtubeLinks.filter((l) => l.trim());
-      await supabase.from('artist_details').update({
-        genres: form.genres,
-        youtube_links: links,
-        updated_at: new Date().toISOString(),
-      }).eq('id', userId);
+      const token = getAccessToken();
+      await apiFetch('/api/auth/onboarding/step2', {
+        method: 'POST',
+        token,
+        body: {
+          genres: form.genres,
+          youtubeLinks: form.youtubeLinks,
+        },
+      });
       setStep(3);
     } catch (err) {
       setError(err.message);
@@ -121,13 +124,15 @@ export default function OnboardingWizard() {
     setLoading(true);
     setError('');
     try {
-      const supabase = createClient();
-      await supabase.from('artist_details').update({
-        min_booking_amount: Number(form.minBookingAmount) || 0,
-        hourly_rate: Number(form.hourlyRate) || 0,
-        is_onboarded: true,
-        updated_at: new Date().toISOString(),
-      }).eq('id', userId);
+      const token = getAccessToken();
+      await apiFetch('/api/auth/onboarding/step3', {
+        method: 'POST',
+        token,
+        body: {
+          minBookingAmount: form.minBookingAmount,
+          hourlyRate: form.hourlyRate,
+        },
+      });
       router.push('/dashboard');
       router.refresh();
     } catch (err) {

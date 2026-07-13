@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { apiFetch } from '@/lib/api';
+import { clearAccessToken, getAccessToken } from '@/lib/auth';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -13,21 +14,24 @@ export default function Navbar() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const token = getAccessToken();
+      if (!token) {
         setProfile(null);
         return;
       }
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      setProfile(data);
+      try {
+        const data = await apiFetch('/api/auth/me', { token });
+        setProfile(data.profile);
+      } catch {
+        clearAccessToken();
+        setProfile(null);
+      }
     }
     load();
   }, [pathname]);
 
-  async function handleSignOut() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+  function handleSignOut() {
+    clearAccessToken();
     setProfile(null);
     router.push('/');
     router.refresh();

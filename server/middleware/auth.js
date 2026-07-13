@@ -1,4 +1,5 @@
 const { supabase } = require('../config/supabase');
+const { verifyToken } = require('../services/jwt');
 
 async function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -7,22 +8,29 @@ async function requireAuth(req, res, next) {
     return res.status(401).json({ message: 'Authentication required' });
   }
 
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
+  let payload;
+  try {
+    payload = verifyToken(token);
+  } catch {
+    return res.status(401).json({ message: 'Invalid or expired token' });
+  }
+
+  const userId = payload.sub;
+  if (!userId) {
     return res.status(401).json({ message: 'Invalid or expired token' });
   }
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single();
 
   if (profileError || !profile) {
     return res.status(401).json({ message: 'Profile not found' });
   }
 
-  req.user = user;
+  req.user = { id: profile.id, email: profile.email };
   req.profile = profile;
   next();
 }

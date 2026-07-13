@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { apiFetch } from '@/lib/api';
+import { getAccessToken } from '@/lib/auth';
 import { statusClass, statusLabel } from '@/lib/status';
 import styles from './bookings.module.css';
 
@@ -14,15 +14,13 @@ export default function AdminBookingsPage() {
   const [error, setError] = useState('');
 
   async function load() {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-    setProfile(prof);
+    const token = getAccessToken();
+    if (!token) return;
 
     try {
-      const data = await apiFetch('/api/admin/bookings', { token: session.access_token });
+      const me = await apiFetch('/api/auth/me', { token });
+      setProfile(me.profile);
+      const data = await apiFetch('/api/admin/bookings', { token });
       setBookings(data);
     } catch (err) {
       setError(err.message);
@@ -38,9 +36,8 @@ export default function AdminBookingsPage() {
   async function handleAction(path, id) {
     setActionLoading(id);
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      await apiFetch(path, { method: 'POST', token: session.access_token });
+      const token = getAccessToken();
+      await apiFetch(path, { method: 'POST', token });
       await load();
     } catch (err) {
       setError(err.message);

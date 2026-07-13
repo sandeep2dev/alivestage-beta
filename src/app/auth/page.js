@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { apiFetch } from '@/lib/api';
+import { setAccessToken } from '@/lib/auth';
 import styles from './auth.module.css';
 
 export default function AuthPage() {
@@ -19,9 +20,10 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      const supabase = createClient();
-      const { error: otpError } = await supabase.auth.signInWithOtp({ email });
-      if (otpError) throw otpError;
+      await apiFetch('/api/auth/send-otp', {
+        method: 'POST',
+        body: { email },
+      });
       setMessage('Check your email for the one-time passcode.');
       setStep('otp');
     } catch (err) {
@@ -36,36 +38,23 @@ export default function AuthPage() {
     setLoading(true);
     setError('');
     try {
-      const supabase = createClient();
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'email',
+      const data = await apiFetch('/api/auth/verify-otp', {
+        method: 'POST',
+        body: { email, otp },
       });
-      if (verifyError) throw verifyError;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, onboarding_complete')
-        .eq('id', user.id)
-        .single();
+      setAccessToken(data.accessToken);
+      const profile = data.profile;
+      const artistDetails = data.artistDetails;
 
       if (!profile?.onboarding_complete) {
         router.push('/onboarding/role');
         return;
       }
 
-      if (profile?.role === 'artist') {
-        const { data: details } = await supabase
-          .from('artist_details')
-          .select('is_onboarded')
-          .eq('id', user.id)
-          .maybeSingle();
-        if (!details?.is_onboarded) {
-          router.push('/onboarding');
-          return;
-        }
+      if (profile?.role === 'artist' && !artistDetails?.is_onboarded) {
+        router.push('/onboarding');
+        return;
       }
 
       if (['admin', 'superadmin'].includes(profile?.role)) {

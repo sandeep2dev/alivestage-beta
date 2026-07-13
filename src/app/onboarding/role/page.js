@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { apiFetch } from '@/lib/api';
+import { getAccessToken, setAccessToken } from '@/lib/auth';
 import styles from './role.module.css';
 
 export default function RoleSelectionPage() {
@@ -11,22 +12,34 @@ export default function RoleSelectionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (!getAccessToken()) {
+      router.push('/auth');
+    }
+  }, [router]);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const token = getAccessToken();
+      if (!token) {
         router.push('/auth');
         return;
       }
 
-      await supabase.from('profiles').update({ role, onboarding_complete: true }).eq('id', user.id);
+      const data = await apiFetch('/api/auth/role', {
+        method: 'POST',
+        token,
+        body: { role },
+      });
+
+      if (data.accessToken) {
+        setAccessToken(data.accessToken);
+      }
 
       if (role === 'artist') {
-        await supabase.from('artist_details').upsert({ id: user.id, city: '' });
         router.push('/onboarding');
       } else {
         router.push('/');

@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { apiFetch } from '@/lib/api';
+import { getAccessToken } from '@/lib/auth';
 import ConfirmationModal from '@/components/ConfirmationModal/ConfirmationModal';
 import styles from './Settings.module.css';
 
@@ -19,22 +19,21 @@ export default function AdminSettingsPage() {
   const [message, setMessage] = useState('');
 
   async function load() {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-
-    const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-    setProfile(prof);
-
-    if (prof?.role !== 'superadmin') {
-      router.push('/admin');
-      return;
-    }
+    const token = getAccessToken();
+    if (!token) return;
 
     try {
+      const me = await apiFetch('/api/auth/me', { token });
+      setProfile(me.profile);
+
+      if (me.profile?.role !== 'superadmin') {
+        router.push('/admin');
+        return;
+      }
+
       const [settings, artistList] = await Promise.all([
-        apiFetch('/api/admin/settings', { token: session.access_token }),
-        apiFetch('/api/admin/artists', { token: session.access_token }),
+        apiFetch('/api/admin/settings', { token }),
+        apiFetch('/api/admin/artists', { token }),
       ]);
       setCommission(String(settings.commission_percentage));
       setArtists(artistList);
@@ -57,11 +56,10 @@ export default function AdminSettingsPage() {
   async function confirmUpdate() {
     setShowConfirm(false);
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const token = getAccessToken();
       await apiFetch('/api/admin/settings/commission', {
         method: 'PATCH',
-        token: session.access_token,
+        token,
         body: { commissionPercentage: Number(pendingRate) },
       });
       setMessage('Commission rate updated successfully.');
@@ -73,11 +71,10 @@ export default function AdminSettingsPage() {
 
   async function updatePayoutAccount(artistId, value) {
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+      const token = getAccessToken();
       await apiFetch(`/api/admin/artists/${artistId}/payout-account`, {
         method: 'PATCH',
-        token: session.access_token,
+        token,
         body: { razorpayLinkedAccountId: value },
       });
       setMessage('Payout account updated.');

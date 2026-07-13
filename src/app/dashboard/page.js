@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { apiFetch, openRazorpayCheckout } from '@/lib/api';
+import { getAccessToken } from '@/lib/auth';
 import { statusClass, statusLabel } from '@/lib/status';
 import styles from './dashboard.module.css';
 
@@ -16,18 +16,16 @@ export default function DashboardPage() {
   const [error, setError] = useState('');
 
   async function loadData() {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    const token = getAccessToken();
+    if (!token) {
       router.push('/auth');
       return;
     }
 
-    const { data: prof } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-    setProfile(prof);
-
     try {
-      const data = await apiFetch('/api/bookings/mine', { token: session.access_token });
+      const me = await apiFetch('/api/auth/me', { token });
+      setProfile(me.profile);
+      const data = await apiFetch('/api/bookings/mine', { token });
       setBookings(data);
     } catch (err) {
       setError(err.message);
@@ -41,9 +39,12 @@ export default function DashboardPage() {
   }, [router]);
 
   async function withToken(action) {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    return action(session.access_token);
+    const token = getAccessToken();
+    if (!token) {
+      router.push('/auth');
+      return;
+    }
+    return action(token);
   }
 
   async function handleAccept(id) {

@@ -5,7 +5,7 @@ CREATE TYPE booking_status AS ENUM ('pending', 'confirmed', 'rejected', 'cancell
 CREATE TYPE payment_status AS ENUM ('token_paid', 'fully_paid', 'refunded', 'released_to_artist');
 
 CREATE TABLE profiles (
-    id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name TEXT NOT NULL DEFAULT '',
     email TEXT UNIQUE NOT NULL,
     role user_role NOT NULL DEFAULT 'fan',
@@ -72,25 +72,7 @@ CREATE TABLE payments (
 
 INSERT INTO platform_settings (id, commission_percentage) VALUES (1, 10.00);
 
--- Auto-create profile on signup
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $$
-BEGIN
-    INSERT INTO public.profiles (id, email, name)
-    VALUES (
-        NEW.id,
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1))
-    );
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created
-    AFTER INSERT ON auth.users
-    FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- RLS
+-- RLS (enforced for anon/authenticated keys; Express uses the service role and bypasses RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE artist_details ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;

@@ -1,23 +1,40 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api';
+import { getAccessToken } from '@/lib/auth';
 import styles from './admin.module.css';
 
-export default async function AdminLayout({ children }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export default function AdminLayout({ children }) {
+  const router = useRouter();
+  const [profile, setProfile] = useState(null);
+  const [ready, setReady] = useState(false);
 
-  if (!user) {
-    redirect('/auth');
-  }
+  useEffect(() => {
+    async function load() {
+      const token = getAccessToken();
+      if (!token) {
+        router.replace('/auth');
+        return;
+      }
+      try {
+        const data = await apiFetch('/api/auth/me', { token });
+        if (!data.profile || !['admin', 'superadmin'].includes(data.profile.role)) {
+          router.replace('/');
+          return;
+        }
+        setProfile(data.profile);
+        setReady(true);
+      } catch {
+        router.replace('/auth');
+      }
+    }
+    load();
+  }, [router]);
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || !['admin', 'superadmin'].includes(profile.role)) {
-    redirect('/');
+  if (!ready || !profile) {
+    return <div className="container"><p>Loading...</p></div>;
   }
 
   return (

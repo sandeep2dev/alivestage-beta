@@ -42,12 +42,16 @@ const requiredFiles = [
   'server/routes/bookings.js',
   'server/routes/admin.js',
   'server/routes/artists.js',
+  'server/routes/auth.js',
   'server/services/payment.js',
   'server/services/email.js',
   'server/services/cron.js',
+  'server/services/otp.js',
+  'server/services/jwt.js',
   'server/middleware/auth.js',
   'server/config/supabase.js',
   'supabase/migrations/001_initial_schema.sql',
+  'supabase/migrations/002_remove_supabase_auth.sql',
   '.env.example',
 ];
 
