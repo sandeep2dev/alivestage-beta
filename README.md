@@ -6,7 +6,7 @@ Secure two-sided marketplace connecting fans with live performance artists. Buil
 
 - **Frontend:** Next.js App Router, CSS Modules, global design tokens
 - **Backend:** Node.js Express (`server/`)
-- **Database & Storage:** Supabase PostgreSQL + Storage
+- **Database & Storage:** Supabase PostgreSQL + Storage (avatars)
 - **Auth:** Email OTP (custom, via Express + SMTP)
 - **Payments:** Razorpay Route (fund holds)
 
@@ -38,7 +38,7 @@ Secure two-sided marketplace connecting fans with live performance artists. Buil
 
    **Note:** Do not set `SUPABASE_DB` or `SUPABASE_DB_PASSWORD` in `.env.local`. The CLI loads dotenv and those names override `[db]` in `config.toml`, which causes `Missing required field in config: db.port`.
 
-4. Create a public `avatars` storage bucket in Supabase (if not already created by a migration).
+4. Artist avatars use Supabase Storage. Migration `004_avatars_bucket.sql` creates the public `avatars` bucket (included when you `db push`).
 
 5. Promote a user to superadmin (after they sign in once via OTP):
    ```sql

@@ -157,7 +157,7 @@ router.post('/onboarding/step1', requireAuth, async (req, res) => {
       const contentType = match ? match[1] : 'image/jpeg';
       const base64Data = match ? match[2] : avatarBase64;
       const buffer = Buffer.from(base64Data, 'base64');
-      const ext = avatarFileName.split('.').pop() || 'jpg';
+      const ext = String(avatarFileName).split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
       const path = `${req.profile.id}/avatar.${ext}`;
 
       const { error: uploadError } = await supabase.storage
