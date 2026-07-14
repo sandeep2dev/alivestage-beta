@@ -4,18 +4,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { imageToUploadPayload } from '@/lib/image';
 import styles from './onboarding.module.css';
 
 const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Folk', 'Bollywood'];
-
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function OnboardingWizard() {
   const router = useRouter();
@@ -79,9 +71,9 @@ export default function OnboardingWizard() {
       const body = { bio: form.bio, city: form.city };
       const fileInput = document.getElementById('avatar');
       if (fileInput?.files?.[0]) {
-        const file = fileInput.files[0];
-        body.avatarBase64 = await fileToBase64(file);
-        body.avatarFileName = file.name;
+        const payload = await imageToUploadPayload(fileInput.files[0]);
+        body.avatarBase64 = payload.base64;
+        body.avatarFileName = payload.fileName;
       }
       const data = await apiFetch('/api/auth/onboarding/step1', {
         method: 'POST',
