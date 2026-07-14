@@ -164,6 +164,40 @@ button {
   outline-offset: 1px;
 }
 
+.input.inputError,
+.select.inputError,
+.textarea.inputError,
+.input[aria-invalid="true"],
+.select[aria-invalid="true"],
+.textarea[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.input.inputError:focus,
+.select.inputError:focus,
+.textarea.inputError:focus,
+.input[aria-invalid="true"]:focus,
+.select[aria-invalid="true"]:focus,
+.textarea[aria-invalid="true"]:focus {
+  outline-color: var(--color-danger);
+}
+
+.fieldError {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-danger);
+}
+
+.fieldHint {
+  margin-top: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.requiredMark {
+  color: var(--color-danger);
+}
+
 .label {
   display: block;
   font-size: var(--font-size-sm);

@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch, openRazorpayCheckout } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { formatCityLabel } from '@/lib/cities';
 import { statusClass, statusLabel } from '@/lib/status';
+import ConfirmationModal from '@/components/ConfirmationModal/ConfirmationModal';
+import FormAlert from '@/components/FormAlert/FormAlert';
 import styles from './dashboard.module.css';
 
 export default function DashboardPage() {
@@ -15,6 +18,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(null);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [confirm, setConfirm] = useState(null);
 
   async function loadData() {
     const token = getAccessToken();
@@ -39,6 +44,15 @@ export default function DashboardPage() {
     loadData();
   }, [router]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('booked') === '1') {
+      setMessage('Booking submitted successfully.');
+      router.replace('/dashboard', { scroll: false });
+    }
+  }, [router]);
+
   async function withToken(action) {
     const token = getAccessToken();
     if (!token) {
@@ -48,22 +62,24 @@ export default function DashboardPage() {
     return action(token);
   }
 
-  async function handleAccept(id) {
-    setActionLoading(id);
+  async function runConfirmedAction() {
+    if (!confirm) return;
+    const { type, id, booking } = confirm;
+    setConfirm(null);
+    setActionLoading(id || booking?.id);
+    setError('');
+    setMessage('');
     try {
-      await withToken((token) => apiFetch(`/api/bookings/${id}/accept`, { method: 'POST', token }));
-      await loadData();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleReject(id) {
-    setActionLoading(id);
-    try {
-      await withToken((token) => apiFetch(`/api/bookings/${id}/reject`, { method: 'POST', token }));
+      if (type === 'accept') {
+        await withToken((token) => apiFetch(`/api/bookings/${id}/accept`, { method: 'POST', token }));
+        setMessage('Booking accepted.');
+      } else if (type === 'reject') {
+        await withToken((token) => apiFetch(`/api/bookings/${id}/reject`, { method: 'POST', token }));
+        setMessage('Booking rejected.');
+      } else if (type === 'complete') {
+        await withToken((token) => apiFetch(`/api/bookings/${id}/complete`, { method: 'POST', token }));
+        setMessage('Event marked complete.');
+      }
       await loadData();
     } catch (err) {
       setError(err.message);
@@ -74,6 +90,8 @@ export default function DashboardPage() {
 
   async function handlePayBalance(booking) {
     setActionLoading(booking.id);
+    setError('');
+    setMessage('');
     try {
       const result = await withToken((token) =>
         apiFetch(`/api/bookings/${booking.id}/pay-balance`, { method: 'POST', token })
@@ -92,6 +110,7 @@ export default function DashboardPage() {
             },
           })
         );
+        setMessage('Balance payment recorded.');
         await loadData();
         return;
       }
@@ -115,21 +134,10 @@ export default function DashboardPage() {
               },
             })
           );
+          setMessage('Balance payment recorded.');
           await loadData();
         },
       });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setActionLoading(null);
-    }
-  }
-
-  async function handleComplete(id) {
-    setActionLoading(id);
-    try {
-      await withToken((token) => apiFetch(`/api/bookings/${id}/complete`, { method: 'POST', token }));
-      await loadData();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -141,6 +149,7 @@ export default function DashboardPage() {
 
   const isArtist = profile?.role === 'artist';
   const isFan = profile?.role === 'fan';
+  const busyId = actionLoading;
 
   return (
     <div className={`container ${styles.page}`}>
@@ -149,10 +158,18 @@ export default function DashboardPage() {
         {isArtist ? 'Manage incoming booking requests' : 'Track your event bookings'}
       </p>
 
-      {error && <div className="alert alertError">{error}</div>}
+      <FormAlert type="error">{error}</FormAlert>
+      <FormAlert type="success">{message}</FormAlert>
 
       {bookings.length === 0 ? (
-        <p className={styles.empty}>No bookings yet.</p>
+        <div className={styles.empty}>
+          <p>No bookings yet.</p>
+          {isFan && (
+            <p style={{ marginTop: '0.75rem' }}>
+              <Link href="/" className="btn btnPrimary">Discover artists</Link>
+            </p>
+          )}
+        </div>
       ) : (
         <div className={styles.list}>
           {bookings.map((b) => {
@@ -160,6 +177,7 @@ export default function DashboardPage() {
             const hasBalancePaid = (b.payments || []).some(
               (p) => p.payment_type === 'balance' && p.status === 'fully_paid'
             );
+            const busy = busyId === b.id;
 
             return (
               <div key={b.id} className={`card ${styles.bookingCard}`}>
@@ -187,18 +205,31 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         className="btn btnPrimary"
-                        disabled={actionLoading === b.id}
-                        onClick={() => handleAccept(b.id)}
+                        disabled={busy}
+                        aria-busy={busy || undefined}
+                        onClick={() => setConfirm({
+                          type: 'accept',
+                          id: b.id,
+                          title: 'Accept booking?',
+                          message: 'The fan will be asked to pay the remaining balance.',
+                          confirmLabel: 'Accept',
+                        })}
                       >
-                        Accept
+                        {busy ? 'Working...' : 'Accept'}
                       </button>
                       <button
                         type="button"
                         className="btn btnDanger"
-                        disabled={actionLoading === b.id}
-                        onClick={() => handleReject(b.id)}
+                        disabled={busy}
+                        onClick={() => setConfirm({
+                          type: 'reject',
+                          id: b.id,
+                          title: 'Reject booking?',
+                          message: 'The fan’s token payment will be refunded.',
+                          confirmLabel: 'Reject',
+                        })}
                       >
-                        Reject
+                        {busy ? 'Working...' : 'Reject'}
                       </button>
                     </>
                   )}
@@ -206,20 +237,27 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       className="btn btnPrimary"
-                      disabled={actionLoading === b.id}
+                      disabled={busy}
+                      aria-busy={busy || undefined}
                       onClick={() => handlePayBalance(b)}
                     >
-                      Pay Balance (₹{Number(b.remaining_amount).toLocaleString()})
+                      {busy ? 'Processing...' : `Pay Balance (₹${Number(b.remaining_amount).toLocaleString()})`}
                     </button>
                   )}
                   {isFan && b.status === 'confirmed' && hasBalancePaid && (
                     <button
                       type="button"
                       className="btn btnPrimary"
-                      disabled={actionLoading === b.id}
-                      onClick={() => handleComplete(b.id)}
+                      disabled={busy}
+                      onClick={() => setConfirm({
+                        type: 'complete',
+                        id: b.id,
+                        title: 'Mark event complete?',
+                        message: 'Confirm only after the performance has finished.',
+                        confirmLabel: 'Mark complete',
+                      })}
                     >
-                      Mark Event Complete
+                      {busy ? 'Working...' : 'Mark Event Complete'}
                     </button>
                   )}
                 </div>
@@ -228,6 +266,15 @@ export default function DashboardPage() {
           })}
         </div>
       )}
+
+      <ConfirmationModal
+        open={Boolean(confirm)}
+        title={confirm?.title || ''}
+        message={confirm?.message || ''}
+        confirmLabel={confirm?.confirmLabel || 'Confirm'}
+        onConfirm={runConfirmedAction}
+        onCancel={() => setConfirm(null)}
+      />
     </div>
   );
 }

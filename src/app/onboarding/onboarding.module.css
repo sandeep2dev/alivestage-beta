@@ -64,3 +64,18 @@
   resize: vertical;
   min-height: 100px;
 }
+
+.avatarPreview {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: var(--space-md);
+  border: 1px solid var(--color-border);
+}
+
+.linkRow {
+  display: grid;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}

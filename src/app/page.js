@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ArtistCard from '@/components/ArtistCard/ArtistCard';
 import CitySelect from '@/components/CitySelect/CitySelect';
+import FormAlert from '@/components/FormAlert/FormAlert';
 import { apiFetch } from '@/lib/api';
+import { minLteMax } from '@/lib/validators';
 import styles from './page.module.css';
 
 const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Folk', 'Bollywood'];
@@ -11,28 +13,61 @@ const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Fo
 export default function HomePage() {
   const [artists, setArtists] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filters, setFilters] = useState({ cityId: '', genre: '', minRate: '', maxRate: '' });
+  const [debouncedRates, setDebouncedRates] = useState({ minRate: '', maxRate: '' });
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedRates({ minRate: filters.minRate, maxRate: filters.maxRate });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [filters.minRate, filters.maxRate]);
+
+  const rateOrder = useMemo(
+    () => minLteMax(debouncedRates.minRate, debouncedRates.maxRate),
+    [debouncedRates]
+  );
+
+  const hasFilters = Boolean(
+    filters.cityId || filters.genre || filters.minRate || filters.maxRate
+  );
 
   useEffect(() => {
     async function load() {
+      if (!rateOrder.ok) {
+        setArtists([]);
+        setLoading(false);
+        setError(rateOrder.message);
+        return;
+      }
+
       setLoading(true);
+      setError('');
       try {
         const params = new URLSearchParams();
         if (filters.cityId) params.set('cityId', filters.cityId);
         if (filters.genre) params.set('genre', filters.genre);
-        if (filters.minRate) params.set('minRate', filters.minRate);
-        if (filters.maxRate) params.set('maxRate', filters.maxRate);
+        if (debouncedRates.minRate) params.set('minRate', debouncedRates.minRate);
+        if (debouncedRates.maxRate) params.set('maxRate', debouncedRates.maxRate);
         const qs = params.toString();
         const data = await apiFetch(`/api/artists${qs ? `?${qs}` : ''}`);
         setArtists(data);
-      } catch {
+      } catch (err) {
         setArtists([]);
+        setError(err.message || 'Failed to load artists');
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [filters]);
+  }, [filters.cityId, filters.genre, debouncedRates, rateOrder]);
+
+  function clearFilters() {
+    setFilters({ cityId: '', genre: '', minRate: '', maxRate: '' });
+    setDebouncedRates({ minRate: '', maxRate: '' });
+    setError('');
+  }
 
   return (
     <div className={`container ${styles.page}`}>
@@ -70,6 +105,7 @@ export default function HomePage() {
             id="minRate"
             type="number"
             className="input"
+            min={0}
             placeholder="0"
             value={filters.minRate}
             onChange={(e) => setFilters({ ...filters, minRate: e.target.value })}
@@ -81,16 +117,27 @@ export default function HomePage() {
             id="maxRate"
             type="number"
             className="input"
+            min={0}
             placeholder="Any"
             value={filters.maxRate}
             onChange={(e) => setFilters({ ...filters, maxRate: e.target.value })}
           />
         </div>
+        {hasFilters && (
+          <div className={styles.filterGroup}>
+            <label className="label">&nbsp;</label>
+            <button type="button" className="btn btnSecondary" onClick={clearFilters}>
+              Clear filters
+            </button>
+          </div>
+        )}
       </section>
+
+      <FormAlert type="error">{error}</FormAlert>
 
       {loading ? (
         <p className={styles.empty}>Loading artists...</p>
-      ) : artists.length === 0 ? (
+      ) : error && artists.length === 0 ? null : artists.length === 0 ? (
         <p className={styles.empty}>No artists found. Try adjusting your filters.</p>
       ) : (
         <div className={`grid gridCols3 ${styles.grid}`}>

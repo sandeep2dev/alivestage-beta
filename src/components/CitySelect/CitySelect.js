@@ -12,18 +12,24 @@ export default function CitySelect({
   placeholder = 'Select city',
   allowEmpty = false,
   className = 'select',
+  'aria-invalid': ariaInvalid,
+  'aria-describedby': ariaDescribedBy,
 }) {
   const { cities, loading, error } = useCities();
+  const selectClass = [className, ariaInvalid ? 'inputError' : ''].filter(Boolean).join(' ');
 
   return (
     <>
       <select
         id={id}
-        className={className}
+        className={selectClass}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         required={required}
         disabled={disabled || loading}
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedBy}
+        aria-busy={loading || undefined}
       >
         <option value="">{loading ? 'Loading cities...' : placeholder}</option>
         {['Tier 1', 'Tier 2', 'Tier 3'].map((tier) => {
@@ -40,9 +46,9 @@ export default function CitySelect({
           );
         })}
       </select>
-      {error && <p className="alert alertError" style={{ marginTop: '0.5rem' }}>{error}</p>}
+      {error && <p className="fieldError" role="alert">{error}</p>}
       {!allowEmpty && required && !loading && cities.length === 0 && !error && (
-        <p className="alert alertError" style={{ marginTop: '0.5rem' }}>No cities available.</p>
+        <p className="fieldError" role="alert">No cities available.</p>
       )}
     </>
   );

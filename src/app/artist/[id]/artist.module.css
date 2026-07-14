@@ -81,6 +81,25 @@
   margin-bottom: var(--space-md);
 }
 
+.costPreview {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-sm);
+}
+
+.costPreview p + p {
+  margin-top: var(--space-xs);
+}
+
+.bookActions {
+  display: flex;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
 .textarea {
   width: 100%;
   padding: 0.625rem 0.875rem;

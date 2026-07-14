@@ -33,9 +33,13 @@
 
 .artistRow {
   display: grid;
-  grid-template-columns: 180px 1fr;
-  gap: var(--space-md);
+  grid-template-columns: 180px 1fr auto;
+  gap: var(--space-sm) var(--space-md);
   align-items: center;
+}
+
+.artistRow .fieldError {
+  grid-column: 2 / -1;
 }
 
 @media (max-width: 640px) {
@@ -46,5 +50,9 @@
 
   .artistRow {
     grid-template-columns: 1fr;
+  }
+
+  .artistRow .fieldError {
+    grid-column: 1;
   }
 }

@@ -1,31 +1,88 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { setAccessToken } from '@/lib/auth';
+import { isEmail, isOtp } from '@/lib/validators';
+import FormAlert from '@/components/FormAlert/FormAlert';
+import FormField from '@/components/FormField/FormField';
 import styles from './auth.module.css';
+
+const RESEND_SECONDS = 30;
 
 export default function AuthPage() {
   const router = useRouter();
+  const otpRef = useRef(null);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState('email');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [resendIn, setResendIn] = useState(0);
+
+  useEffect(() => {
+    if (step !== 'otp' || resendIn <= 0) return undefined;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [step, resendIn]);
+
+  useEffect(() => {
+    if (step === 'otp') {
+      otpRef.current?.focus();
+    }
+  }, [step]);
+
+  async function requestOtp(normalizedEmail) {
+    await apiFetch('/api/auth/send-otp', {
+      method: 'POST',
+      body: { email: normalizedEmail },
+    });
+    setEmail(normalizedEmail);
+    setMessage(`We sent a 6-digit code to ${normalizedEmail}.`);
+    setStep('otp');
+    setResendIn(RESEND_SECONDS);
+    setOtp('');
+  }
 
   async function sendOtp(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
+    setFieldErrors({});
+
+    const emailCheck = isEmail(email);
+    if (!emailCheck.ok) {
+      setFieldErrors({ email: emailCheck.message });
+      setLoading(false);
+      return;
+    }
+
     try {
-      await apiFetch('/api/auth/send-otp', {
-        method: 'POST',
-        body: { email },
-      });
-      setMessage('Check your email for the one-time passcode.');
-      setStep('otp');
+      await requestOtp(emailCheck.value);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resendOtp() {
+    if (resendIn > 0 || loading) return;
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const emailCheck = isEmail(email);
+      if (!emailCheck.ok) {
+        setStep('email');
+        setFieldErrors({ email: emailCheck.message });
+        return;
+      }
+      await requestOtp(emailCheck.value);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,10 +94,20 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
+    setFieldErrors({});
+
+    const otpCheck = isOtp(otp);
+    if (!otpCheck.ok) {
+      setFieldErrors({ otp: otpCheck.message });
+      setLoading(false);
+      return;
+    }
+
     try {
       const data = await apiFetch('/api/auth/verify-otp', {
         method: 'POST',
-        body: { email, otp },
+        body: { email, otp: otpCheck.value },
       });
 
       setAccessToken(data.accessToken);
@@ -71,54 +138,80 @@ export default function AuthPage() {
     }
   }
 
+  function backToEmail() {
+    setStep('email');
+    setOtp('');
+    setMessage('');
+    setError('');
+    setFieldErrors({});
+    setResendIn(0);
+  }
+
+  const otpValid = isOtp(otp).ok;
+
   return (
     <div className={`container ${styles.page}`}>
       <div className={`card ${styles.card}`}>
         <h1 className="pageTitle">Sign In</h1>
         <p className={styles.subtitle}>Passwordless login with email OTP</p>
 
-        {error && <div className="alert alertError">{error}</div>}
-        {message && <div className="alert alertSuccess">{message}</div>}
+        <FormAlert type="error">{error}</FormAlert>
+        <FormAlert type="success">{message}</FormAlert>
 
         {step === 'email' ? (
-          <form onSubmit={sendOtp}>
-            <div className="formGroup">
-              <label className="label" htmlFor="email">Email address</label>
+          <form onSubmit={sendOtp} noValidate>
+            <FormField id="email" label="Email address" required error={fieldErrors.email}>
               <input
-                id="email"
                 type="email"
                 className="input"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
+                autoComplete="email"
                 placeholder="you@example.com"
               />
-            </div>
+            </FormField>
             <button type="submit" className="btn btnPrimary" disabled={loading}>
               {loading ? 'Sending...' : 'Send OTP'}
             </button>
           </form>
         ) : (
-          <form onSubmit={verifyOtp}>
-            <div className="formGroup">
-              <label className="label" htmlFor="otp">One-time passcode</label>
+          <form onSubmit={verifyOtp} noValidate>
+            <FormField
+              id="otp"
+              label="One-time passcode"
+              required
+              error={fieldErrors.otp}
+              hint={`Sent to ${email}`}
+            >
               <input
-                id="otp"
+                ref={otpRef}
                 type="text"
                 className="input"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                placeholder="Enter 6-digit code"
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                pattern="[0-9]{6}"
+                placeholder="6-digit code"
               />
-            </div>
-            <button type="submit" className="btn btnPrimary" disabled={loading}>
+            </FormField>
+            <button type="submit" className="btn btnPrimary" disabled={loading || !otpValid}>
               {loading ? 'Verifying...' : 'Verify & Sign In'}
             </button>
             <button
               type="button"
               className={`btn btnSecondary ${styles.backBtn}`}
-              onClick={() => setStep('email')}
+              onClick={resendOtp}
+              disabled={loading || resendIn > 0}
+            >
+              {resendIn > 0 ? `Resend in ${resendIn}s` : 'Resend code'}
+            </button>
+            <button
+              type="button"
+              className={`btn btnSecondary ${styles.backBtn}`}
+              onClick={backToEmail}
+              disabled={loading}
             >
               Use different email
             </button>

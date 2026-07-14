@@ -1,13 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { formatCityLabel } from '@/lib/cities';
+import {
+  isFutureDateTime,
+  lengthBetween,
+  minDateTimeLocal,
+  parseMoney,
+} from '@/lib/validators';
 import CitySelect from '@/components/CitySelect/CitySelect';
+import FormAlert from '@/components/FormAlert/FormAlert';
+import FormField from '@/components/FormField/FormField';
 import styles from './artist.module.css';
+
+const TOKEN_RATIO = 0.2;
 
 export default function ArtistProfilePage() {
   const { id } = useParams();
@@ -24,6 +34,7 @@ export default function ArtistProfilePage() {
     durationHours: 2,
   });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -56,31 +67,69 @@ export default function ArtistProfilePage() {
     return match ? match[1] : null;
   }
 
+  const costPreview = useMemo(() => {
+    if (!artist) return null;
+    const hours = Number(booking.durationHours);
+    if (!Number.isFinite(hours) || hours < 1) return null;
+    const hourlyTotal = Number(artist.hourly_rate) * hours;
+    const total = Math.max(Number(artist.min_booking_amount), hourlyTotal);
+    const token = Math.round(total * TOKEN_RATIO * 100) / 100;
+    const balance = Math.round((total - token) * 100) / 100;
+    return { total, token, balance };
+  }, [artist, booking.durationHours]);
+
   async function handleBook(e) {
     e.preventDefault();
     setSubmitting(true);
     setError('');
-    try {
-      const token = getAccessToken();
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-      if (profile?.role !== 'fan') {
-        setError('Only fans can submit booking requests.');
-        return;
-      }
+    setFieldErrors({});
 
+    const token = getAccessToken();
+    if (!token) {
+      router.push('/auth');
+      setSubmitting(false);
+      return;
+    }
+    if (profile?.role !== 'fan') {
+      setError('Only fans can submit booking requests.');
+      setSubmitting(false);
+      return;
+    }
+
+    const details = lengthBetween(booking.eventDetails, { min: 10, max: 2000, label: 'Event details' });
+    const address = lengthBetween(booking.venueLocation, { min: 5, max: 500, label: 'Venue address' });
+    const when = isFutureDateTime(booking.eventDate, { minHoursAhead: 1 });
+    const duration = parseMoney(booking.durationHours, {
+      label: 'Duration',
+      min: 1,
+      max: 12,
+      integer: true,
+    });
+
+    const errors = {};
+    if (!details.ok) errors.eventDetails = details.message;
+    if (!booking.venueCityId) errors.venueCityId = 'Select a venue city';
+    if (!address.ok) errors.venueLocation = address.message;
+    if (!when.ok) errors.eventDate = when.message;
+    if (!duration.ok) errors.durationHours = duration.message;
+
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors);
+      setSubmitting(false);
+      return;
+    }
+
+    try {
       const result = await apiFetch('/api/bookings/create', {
         method: 'POST',
         token,
         body: {
           artistId: id,
-          eventDetails: booking.eventDetails,
+          eventDetails: details.value,
           venueCityId: booking.venueCityId,
-          venueLocation: booking.venueLocation,
-          eventDate: booking.eventDate,
-          durationHours: Number(booking.durationHours),
+          venueLocation: address.value,
+          eventDate: when.value,
+          durationHours: duration.value,
         },
       });
 
@@ -95,7 +144,7 @@ export default function ArtistProfilePage() {
             razorpay_signature: 'mock',
           },
         });
-        router.push('/dashboard');
+        router.push('/dashboard?booked=1');
         return;
       }
 
@@ -117,7 +166,7 @@ export default function ArtistProfilePage() {
               razorpay_signature: response.razorpay_signature,
             },
           });
-          router.push('/dashboard');
+          router.push('/dashboard?booked=1');
         },
       });
     } catch (err) {
@@ -194,44 +243,75 @@ export default function ArtistProfilePage() {
             Start Booking
           </button>
         ) : (
-          <form onSubmit={handleBook}>
-            {error && <div className="alert alertError">{error}</div>}
-            <div className="formGroup">
-              <label className="label">Event details</label>
-              <textarea className="textarea" rows={3} value={booking.eventDetails} onChange={(e) => setBooking({ ...booking, eventDetails: e.target.value })} required />
-            </div>
-            <div className="formGroup">
-              <label className="label">Venue city</label>
+          <form onSubmit={handleBook} noValidate>
+            <FormAlert type="error">{error}</FormAlert>
+            <FormField id="eventDetails" label="Event details" required error={fieldErrors.eventDetails} hint="At least 10 characters">
+              <textarea
+                className="textarea"
+                rows={3}
+                value={booking.eventDetails}
+                onChange={(e) => setBooking({ ...booking, eventDetails: e.target.value })}
+              />
+            </FormField>
+            <FormField id="venueCity" label="Venue city" required error={fieldErrors.venueCityId}>
               <CitySelect
                 id="venueCity"
                 value={booking.venueCityId}
-                onChange={(venueCityId) => setBooking({ ...booking, venueCityId })}
+                onChange={(venueCityId) => {
+                  setBooking({ ...booking, venueCityId });
+                  setFieldErrors((prev) => ({ ...prev, venueCityId: '' }));
+                }}
                 required
                 placeholder="Select venue city"
               />
-            </div>
-            <div className="formGroup">
-              <label className="label">Venue address</label>
+            </FormField>
+            <FormField id="venueLocation" label="Venue address" required error={fieldErrors.venueLocation}>
               <input
                 className="input"
                 value={booking.venueLocation}
                 onChange={(e) => setBooking({ ...booking, venueLocation: e.target.value })}
-                required
+                autoComplete="street-address"
                 placeholder="Full venue address"
               />
-            </div>
-            <div className="formGroup">
-              <label className="label">Event date & time</label>
-              <input type="datetime-local" className="input" value={booking.eventDate} onChange={(e) => setBooking({ ...booking, eventDate: e.target.value })} required />
-            </div>
-            <div className="formGroup">
-              <label className="label">Duration (hours)</label>
-              <input type="number" className="input" min="1" value={booking.durationHours} onChange={(e) => setBooking({ ...booking, durationHours: e.target.value })} required />
-            </div>
+            </FormField>
+            <FormField id="eventDate" label="Event date & time" required error={fieldErrors.eventDate} hint="At least 1 hour from now">
+              <input
+                type="datetime-local"
+                className="input"
+                min={minDateTimeLocal(1)}
+                value={booking.eventDate}
+                onChange={(e) => setBooking({ ...booking, eventDate: e.target.value })}
+              />
+            </FormField>
+            <FormField id="durationHours" label="Duration (hours)" required error={fieldErrors.durationHours} hint="1–12 hours">
+              <input
+                type="number"
+                className="input"
+                min={1}
+                max={12}
+                step={1}
+                value={booking.durationHours}
+                onChange={(e) => setBooking({ ...booking, durationHours: e.target.value })}
+              />
+            </FormField>
+
+            {costPreview && (
+              <div className={styles.costPreview}>
+                <p><strong>Estimated total:</strong> ₹{costPreview.total.toLocaleString()}</p>
+                <p>Token due now (20%): ₹{costPreview.token.toLocaleString()}</p>
+                <p>Balance after acceptance: ₹{costPreview.balance.toLocaleString()}</p>
+              </div>
+            )}
+
             <p className={styles.tokenNote}>A 20% token payment is required upfront. The balance is due after the artist accepts.</p>
-            <button type="submit" className="btn btnPrimary" disabled={submitting}>
-              {submitting ? 'Processing...' : 'Pay Token & Submit'}
-            </button>
+            <div className={styles.bookActions}>
+              <button type="button" className="btn btnSecondary" disabled={submitting} onClick={() => setShowBookForm(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btnPrimary" disabled={submitting}>
+                {submitting ? 'Processing...' : 'Pay Token & Submit'}
+              </button>
+            </div>
           </form>
         )}
       </section>
