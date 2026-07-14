@@ -15,6 +15,7 @@ router.get('/bookings', async (_req, res) => {
         *,
         fan:profiles!bookings_fan_id_fkey(id, name, email),
         artist:profiles!bookings_artist_id_fkey(id, name, email),
+        venue_city:cities!bookings_venue_city_id_fkey(id, name, state, tier),
         payments(*)
       `)
       .order('created_at', { ascending: false });
@@ -30,7 +31,7 @@ router.get('/artists', async (_req, res) => {
   try {
     const { data, error } = await supabase
       .from('artist_details')
-      .select('*, profile:profiles!artist_details_id_fkey(id, name, email)')
+      .select('*, profile:profiles!artist_details_id_fkey(id, name, email), city:cities!artist_details_city_id_fkey(id, name, state, tier)')
       .order('updated_at', { ascending: false });
 
     if (error) return res.status(500).json({ message: error.message });

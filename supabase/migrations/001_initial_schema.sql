@@ -157,5 +157,5 @@ CREATE POLICY "Superadmins can update settings" ON platform_settings
         EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'superadmin')
     );
 
--- Storage bucket for avatars (run in Supabase dashboard or via API)
--- INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
+-- Storage bucket for avatars (see 004_avatars_bucket.sql)
+-- Location master cities (see 005_cities.sql)

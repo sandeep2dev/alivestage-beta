@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import { formatCityLabel } from '@/lib/cities';
 import styles from './ArtistCard.module.css';
 
 export default function ArtistCard({ artist }) {
   const profile = artist.profile || {};
   const genres = artist.genres || [];
+  const cityLabel = formatCityLabel(artist.city) || '—';
 
   return (
     <Link href={`/artist/${artist.id}`} className={styles.card}>
@@ -16,7 +18,7 @@ export default function ArtistCard({ artist }) {
       </div>
       <div className={styles.body}>
         <h3 className={styles.name}>{profile.name}</h3>
-        <p className={styles.city}>{artist.city}</p>
+        <p className={styles.city}>{cityLabel}</p>
         {genres.length > 0 && (
           <div className={styles.genres}>
             {genres.slice(0, 3).map((g) => (

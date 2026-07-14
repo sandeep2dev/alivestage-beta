@@ -1,5 +1,5 @@
 import '@/styles/global.css';
-import Navbar from '@/components/Navbar/Navbar';
+import AppProviders from '@/components/AppProviders/AppProviders';
 
 export const metadata = {
   title: 'Alivestage — Live Performance Marketplace',
@@ -10,8 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <Navbar />
-        <main>{children}</main>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

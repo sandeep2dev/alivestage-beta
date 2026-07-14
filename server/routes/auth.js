@@ -127,7 +127,7 @@ router.post('/role', requireAuth, async (req, res) => {
     if (role === 'artist') {
       const { error: artistError } = await supabase
         .from('artist_details')
-        .upsert({ id: req.profile.id, city: '' });
+        .upsert({ id: req.profile.id });
       if (artistError) throw artistError;
     }
 
@@ -145,9 +145,19 @@ router.post('/onboarding/step1', requireAuth, async (req, res) => {
       return res.status(403).json({ message: 'Artist only' });
     }
 
-    const { bio, city, avatarBase64, avatarFileName } = req.body || {};
-    if (!bio || !city) {
+    const { bio, cityId, avatarBase64, avatarFileName } = req.body || {};
+    if (!bio || !cityId) {
       return res.status(400).json({ message: 'Bio and city are required' });
+    }
+
+    const { data: cityRow, error: cityError } = await supabase
+      .from('cities')
+      .select('id')
+      .eq('id', cityId)
+      .maybeSingle();
+    if (cityError) throw cityError;
+    if (!cityRow) {
+      return res.status(400).json({ message: 'Invalid city' });
     }
 
     let avatarUrl = req.profile.avatar_url || '';
@@ -178,7 +188,7 @@ router.post('/onboarding/step1', requireAuth, async (req, res) => {
     const { error: detailsError } = await supabase.from('artist_details').upsert({
       id: req.profile.id,
       bio,
-      city,
+      city_id: cityId,
       updated_at: new Date().toISOString(),
     });
     if (detailsError) throw detailsError;

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, openRazorpayCheckout } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { formatCityLabel } from '@/lib/cities';
 import { statusClass, statusLabel } from '@/lib/status';
 import styles from './dashboard.module.css';
 
@@ -172,7 +173,10 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <p className={styles.details}>{b.event_details}</p>
-                <p className={styles.meta}>Venue: {b.venue_location}</p>
+                <p className={styles.meta}>
+                  Venue: {formatCityLabel(b.venue_city) || '—'}
+                  {b.venue_location ? ` — ${b.venue_location}` : ''}
+                </p>
                 <p className={styles.meta}>
                   Total: ₹{Number(b.total_amount).toLocaleString()} · Token: ₹{Number(b.token_amount).toLocaleString()} · Balance: ₹{Number(b.remaining_amount).toLocaleString()}
                 </p>

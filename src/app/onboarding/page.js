@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { imageToUploadPayload } from '@/lib/image';
+import CitySelect from '@/components/CitySelect/CitySelect';
 import styles from './onboarding.module.css';
 
 const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Folk', 'Bollywood'];
@@ -16,7 +17,7 @@ export default function OnboardingWizard() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     bio: '',
-    city: '',
+    cityId: '',
     avatarUrl: '',
     genres: [],
     youtubeLinks: [''],
@@ -68,7 +69,7 @@ export default function OnboardingWizard() {
     setError('');
     try {
       const token = getAccessToken();
-      const body = { bio: form.bio, city: form.city };
+      const body = { bio: form.bio, cityId: form.cityId };
       const fileInput = document.getElementById('avatar');
       if (fileInput?.files?.[0]) {
         const payload = await imageToUploadPayload(fileInput.files[0]);
@@ -157,7 +158,13 @@ export default function OnboardingWizard() {
             </div>
             <div className="formGroup">
               <label className="label" htmlFor="city">Base city</label>
-              <input id="city" className="input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} required />
+              <CitySelect
+                id="city"
+                value={form.cityId}
+                onChange={(cityId) => setForm({ ...form, cityId })}
+                required
+                placeholder="Select your base city"
+              />
             </div>
             <div className="formGroup">
               <label className="label" htmlFor="avatar">Profile photo</label>

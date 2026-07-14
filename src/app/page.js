@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ArtistCard from '@/components/ArtistCard/ArtistCard';
+import CitySelect from '@/components/CitySelect/CitySelect';
 import { apiFetch } from '@/lib/api';
 import styles from './page.module.css';
 
@@ -10,14 +11,14 @@ const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Fo
 export default function HomePage() {
   const [artists, setArtists] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ city: '', genre: '', minRate: '', maxRate: '' });
+  const [filters, setFilters] = useState({ cityId: '', genre: '', minRate: '', maxRate: '' });
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        if (filters.city) params.set('city', filters.city);
+        if (filters.cityId) params.set('cityId', filters.cityId);
         if (filters.genre) params.set('genre', filters.genre);
         if (filters.minRate) params.set('minRate', filters.minRate);
         if (filters.maxRate) params.set('maxRate', filters.maxRate);
@@ -43,12 +44,12 @@ export default function HomePage() {
       <section className={styles.filters}>
         <div className={styles.filterGroup}>
           <label className="label" htmlFor="city">City</label>
-          <input
+          <CitySelect
             id="city"
-            className="input"
-            placeholder="Search by city"
-            value={filters.city}
-            onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+            value={filters.cityId}
+            onChange={(cityId) => setFilters({ ...filters, cityId })}
+            placeholder="All cities"
+            allowEmpty
           />
         </div>
         <div className={styles.filterGroup}>

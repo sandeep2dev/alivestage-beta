@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { formatCityLabel } from '@/lib/cities';
+import CitySelect from '@/components/CitySelect/CitySelect';
 import styles from './artist.module.css';
 
 export default function ArtistProfilePage() {
@@ -16,6 +18,7 @@ export default function ArtistProfilePage() {
   const [showBookForm, setShowBookForm] = useState(false);
   const [booking, setBooking] = useState({
     eventDetails: '',
+    venueCityId: '',
     venueLocation: '',
     eventDate: '',
     durationHours: 2,
@@ -74,6 +77,7 @@ export default function ArtistProfilePage() {
         body: {
           artistId: id,
           eventDetails: booking.eventDetails,
+          venueCityId: booking.venueCityId,
           venueLocation: booking.venueLocation,
           eventDate: booking.eventDate,
           durationHours: Number(booking.durationHours),
@@ -139,7 +143,7 @@ export default function ArtistProfilePage() {
         )}
         <div>
           <h1 className="pageTitle">{p.name}</h1>
-          <p className={styles.city}>{artist.city}</p>
+          <p className={styles.city}>{formatCityLabel(artist.city) || '—'}</p>
           <div className={styles.rates}>
             <span>₹{Number(artist.hourly_rate).toLocaleString()}/hr</span>
             <span>Min booking ₹{Number(artist.min_booking_amount).toLocaleString()}</span>
@@ -197,8 +201,24 @@ export default function ArtistProfilePage() {
               <textarea className="textarea" rows={3} value={booking.eventDetails} onChange={(e) => setBooking({ ...booking, eventDetails: e.target.value })} required />
             </div>
             <div className="formGroup">
-              <label className="label">Venue location</label>
-              <input className="input" value={booking.venueLocation} onChange={(e) => setBooking({ ...booking, venueLocation: e.target.value })} required />
+              <label className="label">Venue city</label>
+              <CitySelect
+                id="venueCity"
+                value={booking.venueCityId}
+                onChange={(venueCityId) => setBooking({ ...booking, venueCityId })}
+                required
+                placeholder="Select venue city"
+              />
+            </div>
+            <div className="formGroup">
+              <label className="label">Venue address</label>
+              <input
+                className="input"
+                value={booking.venueLocation}
+                onChange={(e) => setBooking({ ...booking, venueLocation: e.target.value })}
+                required
+                placeholder="Full venue address"
+              />
             </div>
             <div className="formGroup">
               <label className="label">Event date & time</label>

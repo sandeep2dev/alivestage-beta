@@ -3,16 +3,22 @@ const { supabase } = require('../config/supabase');
 
 const router = express.Router();
 
+const ARTIST_SELECT = `
+  *,
+  profile:profiles!artist_details_id_fkey(id, name, email, avatar_url),
+  city:cities!artist_details_city_id_fkey(id, name, state, tier)
+`;
+
 router.get('/', async (req, res) => {
   try {
-    const { city, genre, minRate, maxRate } = req.query;
+    const { cityId, genre, minRate, maxRate } = req.query;
     let query = supabase
       .from('artist_details')
-      .select('*, profile:profiles!artist_details_id_fkey(id, name, email, avatar_url)')
+      .select(ARTIST_SELECT)
       .eq('is_onboarded', true);
 
-    if (city) {
-      query = query.ilike('city', `%${city}%`);
+    if (cityId) {
+      query = query.eq('city_id', cityId);
     }
     if (genre) {
       query = query.contains('genres', [genre]);
@@ -36,7 +42,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('artist_details')
-      .select('*, profile:profiles!artist_details_id_fkey(id, name, email, avatar_url)')
+      .select(ARTIST_SELECT)
       .eq('id', req.params.id)
       .eq('is_onboarded', true)
       .single();

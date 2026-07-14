@@ -9,9 +9,18 @@ const TOKEN_RATIO = 0.2;
 
 router.post('/create', requireAuth, requireRole('fan'), async (req, res) => {
   try {
-    const { artistId, eventDetails, venueLocation, eventDate, durationHours } = req.body;
-    if (!artistId || !eventDetails || !venueLocation || !eventDate || !durationHours) {
+    const { artistId, eventDetails, venueCityId, venueLocation, eventDate, durationHours } = req.body;
+    if (!artistId || !eventDetails || !venueCityId || !venueLocation || !eventDate || !durationHours) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const { data: venueCity } = await supabase
+      .from('cities')
+      .select('id, name, state')
+      .eq('id', venueCityId)
+      .maybeSingle();
+    if (!venueCity) {
+      return res.status(400).json({ message: 'Invalid venue city' });
     }
 
     const { data: artist } = await supabase
@@ -44,6 +53,7 @@ router.post('/create', requireAuth, requireRole('fan'), async (req, res) => {
         fan_id: req.profile.id,
         artist_id: artistId,
         event_details: eventDetails,
+        venue_city_id: venueCityId,
         venue_location: venueLocation,
         event_date: eventDate,
         duration_hours: durationHours,
@@ -71,6 +81,8 @@ router.post('/create', requireAuth, requireRole('fan'), async (req, res) => {
       artistShare: artistPayout,
     });
 
+    const venueLabel = `${venueCity.name}, ${venueCity.state} — ${venueLocation}`;
+
     if (artist.profile?.email) {
       await sendMail({
         to: artist.profile.email,
@@ -80,7 +92,7 @@ router.post('/create', requireAuth, requireRole('fan'), async (req, res) => {
           fanName: req.profile.name,
           eventDate: new Date(eventDate).toLocaleString(),
           eventDetails,
-          venue: venueLocation,
+          venue: venueLabel,
         }),
       });
     }
@@ -353,6 +365,7 @@ router.get('/mine', requireAuth, async (req, res) => {
         *,
         fan:profiles!bookings_fan_id_fkey(id, name, email),
         artist:profiles!bookings_artist_id_fkey(id, name, email),
+        venue_city:cities!bookings_venue_city_id_fkey(id, name, state, tier),
         payments(*)
       `)
       .order('created_at', { ascending: false });
