@@ -22,6 +22,7 @@ Secure two-sided marketplace connecting fans with live performance artists. Buil
    - `SUPABASE_SERVICE_ROLE_KEY` (use the **service_role** key, not anon)
    - `JWT_SECRET`
    - SMTP credentials (OTP emails use Nodemailer; leave `SMTP_HOST` empty to log OTP codes in the API console)
+   - `DISCORD_SUPPORT_WEBHOOK_URL` (optional; fan Support messages post here, otherwise logged in the API console)
 
 3. Apply database migrations with the Supabase CLI (preferred — do not paste SQL by hand):
    ```bash

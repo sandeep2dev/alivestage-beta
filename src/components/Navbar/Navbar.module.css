@@ -25,10 +25,10 @@
   color: var(--color-primary);
 }
 
-.nav {
+.right {
   display: flex;
   align-items: center;
-  gap: var(--space-lg);
+  gap: var(--space-md);
 }
 
 .link {
@@ -45,4 +45,54 @@
 
 .authBtn {
   padding: 0.5rem 1rem;
+}
+
+.profileButton {
+  border: none;
+  background: transparent;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.profileButton:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.artistChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  max-width: 180px;
+}
+
+.artistMenu {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.artistName {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signOutLink {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  padding: 0;
+  cursor: pointer;
+}
+
+.signOutLink:hover {
+  color: var(--color-primary);
 }
