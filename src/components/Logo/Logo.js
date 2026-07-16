@@ -32,16 +32,18 @@ export default function Logo({
 
   const mark = (
     <span className={classes}>
-      <svg className={styles.icon} width="32" height="32" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" role="img">
+      <svg className={styles.icon} width="32" height="32" viewBox="0 0 165 165" xmlns="http://www.w3.org/2000/svg" role="img">
         <title>AliveStage icon mark</title>
         <desc>Icon-only version of the AliveStage mark: five equalizer bars of varying height, tilted 9 degrees, in amber.</desc>
 
-        <g transform="rotate(-9 110 110)">
-          <rect x="54" y="90" width="14" height="40" rx="7" fill="#FF6B35" />
-          <rect x="80" y="60" width="14" height="100" rx="7" fill="#FF6B35" />
-          <rect x="106" y="30" width="14" height="160" rx="7" fill="#FF6B35" />
-          <rect x="132" y="75" width="14" height="70" rx="7" fill="#FF6B35" />
-          <rect x="158" y="45" width="14" height="130" rx="7" fill="#FF6B35" />
+        <g xmlns="http://www.w3.org/2000/svg" transform="translate(-34,-27)">
+          <g transform="rotate(-9 110 110)">
+            <rect x="54" y="90" width="14" height="40" rx="7" fill="#FF6B35" />
+            <rect x="80" y="60" width="14" height="100" rx="7" fill="#FF6B35" />
+            <rect x="106" y="30" width="14" height="160" rx="7" fill="#FF6B35" />
+            <rect x="132" y="75" width="14" height="70" rx="7" fill="#FF6B35" />
+            <rect x="158" y="45" width="14" height="130" rx="7" fill="#FF6B35" />
+          </g>
         </g>
       </svg>
 
