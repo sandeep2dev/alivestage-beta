@@ -6,9 +6,9 @@ import { getAccessToken } from '@/lib/auth';
 import { lengthBetween } from '@/lib/validators';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
-import styles from './SupportDialog.module.css';
+import styles from './HelpDialog.module.css';
 
-export default function SupportDialog({ open, onClose }) {
+export default function HelpDialog({ open, onClose }) {
   const titleId = useId();
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -69,7 +69,7 @@ export default function SupportDialog({ open, onClose }) {
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id={titleId} className={styles.title}>Support</h2>
+        <h2 id={titleId} className={styles.title}>Need Help?</h2>
         <p className={styles.subtitle}>
           Tell us what you need help with. We will get back to you asap.
         </p>
@@ -79,7 +79,7 @@ export default function SupportDialog({ open, onClose }) {
 
         <form onSubmit={handleSubmit} noValidate>
           <FormField
-            id="support-message"
+            id="help-message"
             label="Your message"
             required
             error={fieldError}

@@ -104,6 +104,53 @@ router.get('/me', requireAuth, async (req, res) => {
   res.json({ profile: req.profile, artistDetails });
 });
 
+router.patch('/profile', requireAuth, async (req, res) => {
+  try {
+    if (req.profile.role !== 'fan') {
+      return res.status(403).json({ message: 'Fan profile only' });
+    }
+
+    const name = String(req.body?.name || '').trim();
+    const phoneRaw = String(req.body?.phone || '').trim();
+
+    if (name.length < 2) {
+      return res.status(400).json({ message: 'Name must be at least 2 characters' });
+    }
+    if (name.length > 80) {
+      return res.status(400).json({ message: 'Name must be at most 80 characters' });
+    }
+
+    let phone = null;
+    if (phoneRaw) {
+      const digits = phoneRaw.replace(/\D/g, '');
+      const local = digits.length === 12 && digits.startsWith('91')
+        ? digits.slice(2)
+        : digits.length === 11 && digits.startsWith('0')
+          ? digits.slice(1)
+          : digits;
+      if (!/^[6-9]\d{9}$/.test(local)) {
+        return res.status(400).json({ message: 'Enter a valid 10-digit Indian mobile number' });
+      }
+      phone = local;
+    }
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update({ name, phone })
+      .eq('id', req.profile.id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    const accessToken = signToken(profile);
+    res.json({ profile, accessToken });
+  } catch (err) {
+    console.error('[auth/profile]', err);
+    res.status(500).json({ message: err.message || 'Failed to update profile' });
+  }
+});
+
 router.post('/role', requireAuth, async (req, res) => {
   try {
     const role = req.body?.role;

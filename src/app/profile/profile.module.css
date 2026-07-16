@@ -1,0 +1,22 @@
+.page {
+  padding: var(--space-2xl) 0;
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  width: 100%;
+  max-width: 520px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  margin: 0;
+}

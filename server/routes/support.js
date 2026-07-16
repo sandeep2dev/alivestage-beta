@@ -16,7 +16,7 @@ router.post('/', requireAuth, async (req, res) => {
     const webhookUrl = process.env.DISCORD_SUPPORT_WEBHOOK_URL;
     const payload = {
       content: [
-        '**Alivestage support request**',
+        '**Alivestage help request**',
         `**From:** ${req.profile.name || '—'}`,
         `**Email:** ${req.profile.email}`,
         `**Role:** ${req.profile.role}`,
@@ -26,7 +26,7 @@ router.post('/', requireAuth, async (req, res) => {
     };
 
     if (!webhookUrl) {
-      console.log('[support] (mock Discord)', payload.content);
+      console.log('[help] (mock Discord)', payload.content);
       return res.json({ ok: true, mock: true });
     }
 
@@ -38,14 +38,14 @@ router.post('/', requireAuth, async (req, res) => {
 
     if (!response.ok) {
       const text = await response.text().catch(() => '');
-      console.error('[support] Discord webhook failed', response.status, text);
-      return res.status(502).json({ message: 'Failed to send support message. Try again later.' });
+      console.error('[help] Discord webhook failed', response.status, text);
+      return res.status(502).json({ message: 'Failed to send help message. Try again later.' });
     }
 
     res.json({ ok: true });
   } catch (err) {
-    console.error('[support]', err);
-    res.status(500).json({ message: err.message || 'Failed to send support message' });
+    console.error('[help]', err);
+    res.status(500).json({ message: err.message || 'Failed to send help message' });
   }
 });
 

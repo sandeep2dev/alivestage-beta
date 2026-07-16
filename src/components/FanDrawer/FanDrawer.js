@@ -10,9 +10,10 @@ const LINKS = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'My bookings' },
   { href: '/transactions', label: 'Transactions' },
+  { href: '/profile', label: 'Profile' },
 ];
 
-export default function FanDrawer({ open, profile, onClose, onSupport, onSignOut }) {
+export default function FanDrawer({ open, profile, onClose, onHelp, onSignOut }) {
   const pathname = usePathname();
 
   useEffect(() => {
@@ -56,8 +57,8 @@ export default function FanDrawer({ open, profile, onClose, onSupport, onSignOut
               {item.label}
             </Link>
           ))}
-          <button type="button" className={styles.linkButton} onClick={onSupport}>
-            Support
+          <button type="button" className={styles.linkButton} onClick={onHelp}>
+            Help
           </button>
         </nav>
 

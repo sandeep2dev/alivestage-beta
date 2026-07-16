@@ -107,6 +107,25 @@ export function isRazorpayAccountId(value) {
   return { ok: true, value: trimmed };
 }
 
+/** Indian mobile: optional empty, or 10 digits with optional +91 / 91 prefix */
+export function isPhone(value, { required = false } = {}) {
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) {
+    if (required) return { ok: false, value: '', message: 'Contact number is required' };
+    return { ok: true, value: '' };
+  }
+  const digits = trimmed.replace(/\D/g, '');
+  const local = digits.length === 12 && digits.startsWith('91')
+    ? digits.slice(2)
+    : digits.length === 11 && digits.startsWith('0')
+      ? digits.slice(1)
+      : digits;
+  if (!/^[6-9]\d{9}$/.test(local)) {
+    return { ok: false, value: trimmed, message: 'Enter a valid 10-digit Indian mobile number' };
+  }
+  return { ok: true, value: local };
+}
+
 /** datetime-local min value ~1 hour from now */
 export function minDateTimeLocal(hoursAhead = 1) {
   const d = new Date(Date.now() + hoursAhead * 60 * 60 * 1000);

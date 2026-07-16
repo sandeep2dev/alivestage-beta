@@ -6,8 +6,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { clearAccessToken, getAccessToken } from '@/lib/auth';
 import FanDrawer from '@/components/FanDrawer/FanDrawer';
+import HelpDialog from '@/components/HelpDialog/HelpDialog';
 import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
-import SupportDialog from '@/components/SupportDialog/SupportDialog';
 import styles from './Navbar.module.css';
 
 export default function Navbar() {
@@ -15,7 +15,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [profile, setProfile] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [supportOpen, setSupportOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -34,14 +34,14 @@ export default function Navbar() {
     }
     load();
     setDrawerOpen(false);
-    setSupportOpen(false);
+    setHelpOpen(false);
   }, [pathname]);
 
   function handleSignOut() {
     clearAccessToken();
     setProfile(null);
     setDrawerOpen(false);
-    setSupportOpen(false);
+    setHelpOpen(false);
     router.push('/');
     router.refresh();
   }
@@ -105,13 +105,13 @@ export default function Navbar() {
             open={drawerOpen}
             profile={profile}
             onClose={() => setDrawerOpen(false)}
-            onSupport={() => {
+            onHelp={() => {
               setDrawerOpen(false);
-              setSupportOpen(true);
+              setHelpOpen(true);
             }}
             onSignOut={handleSignOut}
           />
-          <SupportDialog open={supportOpen} onClose={() => setSupportOpen(false)} />
+          <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
         </>
       )}
     </>
