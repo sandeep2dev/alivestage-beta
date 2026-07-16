@@ -7,6 +7,7 @@ import { getAccessToken } from '@/lib/auth';
 import { imageToUploadPayload } from '@/lib/image';
 import { isYoutubeUrl, lengthBetween, parseMoney } from '@/lib/validators';
 import CitySelect from '@/components/CitySelect/CitySelect';
+import FileUpload from '@/components/FileUpload/FileUpload';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
 import styles from './onboarding.module.css';
@@ -256,37 +257,44 @@ export default function OnboardingWizard() {
             <FormField id="bio" label="Bio" required error={fieldErrors.bio} hint="20–1000 characters">
               <textarea
                 className="textarea"
-                rows={4}
+                rows={5}
                 maxLength={1000}
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
               />
             </FormField>
-            <FormField id="city" label="Base city" required error={fieldErrors.cityId}>
-              <CitySelect
-                id="city"
-                value={form.cityId}
-                onChange={(cityId) => {
-                  setForm({ ...form, cityId });
-                  setFieldErrors((prev) => ({ ...prev, cityId: '' }));
-                }}
-                required
-                placeholder="Select your base city"
-              />
+            <div className="formGrid2">
+              <FormField id="city" label="Base city" required error={fieldErrors.cityId}>
+                <CitySelect
+                  id="city"
+                  value={form.cityId}
+                  onChange={(cityId) => {
+                    setForm({ ...form, cityId });
+                    setFieldErrors((prev) => ({ ...prev, cityId: '' }));
+                  }}
+                  required
+                  placeholder="Select your base city"
+                />
+              </FormField>
+            </div>
+            <FormField id="avatar" label="Profile photo" error={fieldErrors.avatar} hint="Optional. JPG or PNG up to 8 MB.">
+              {({ id, ...fieldProps }) => (
+                <FileUpload
+                  id={id}
+                  previewSrc={avatarPreview || form.avatarUrl}
+                  previewAlt="Profile preview"
+                  fileName={avatarFile?.name || ''}
+                  onChange={onAvatarChange}
+                  aria-invalid={fieldProps['aria-invalid']}
+                  aria-describedby={fieldProps['aria-describedby']}
+                />
+              )}
             </FormField>
-            <FormField id="avatar" label="Profile photo" error={fieldErrors.avatar} hint="Optional. Images up to 8 MB.">
-              <input id="avatar" type="file" accept="image/*" className="input" onChange={onAvatarChange} />
-            </FormField>
-            {(avatarPreview || form.avatarUrl) && (
-              <img
-                src={avatarPreview || form.avatarUrl}
-                alt="Profile preview"
-                className={styles.avatarPreview}
-              />
-            )}
-            <button type="submit" className="btn btnPrimary" disabled={loading}>
-              {loading ? 'Saving...' : 'Next'}
-            </button>
+            <div className="formActions">
+              <button type="submit" className="btn btnPrimary" disabled={loading}>
+                {loading ? 'Saving...' : 'Next'}
+              </button>
+            </div>
           </form>
         )}
 
@@ -351,26 +359,28 @@ export default function OnboardingWizard() {
           <form onSubmit={saveStep3} noValidate>
             <h1 className="pageTitle">Rates</h1>
             <p className={styles.subtitle}>Set your booking pricing in whole rupees</p>
-            <FormField id="minBooking" label="Minimum booking amount (₹)" required error={fieldErrors.minBookingAmount}>
-              <input
-                type="number"
-                className="input"
-                value={form.minBookingAmount}
-                onChange={(e) => setForm({ ...form, minBookingAmount: e.target.value })}
-                min={1}
-                step={1}
-              />
-            </FormField>
-            <FormField id="hourlyRate" label="Hourly rate (₹)" required error={fieldErrors.hourlyRate}>
-              <input
-                type="number"
-                className="input"
-                value={form.hourlyRate}
-                onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
-                min={1}
-                step={1}
-              />
-            </FormField>
+            <div className="formGrid2">
+              <FormField id="minBooking" label="Minimum booking amount (₹)" required error={fieldErrors.minBookingAmount}>
+                <input
+                  type="number"
+                  className="input"
+                  value={form.minBookingAmount}
+                  onChange={(e) => setForm({ ...form, minBookingAmount: e.target.value })}
+                  min={1}
+                  step={1}
+                />
+              </FormField>
+              <FormField id="hourlyRate" label="Hourly rate (₹)" required error={fieldErrors.hourlyRate}>
+                <input
+                  type="number"
+                  className="input"
+                  value={form.hourlyRate}
+                  onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
+                  min={1}
+                  step={1}
+                />
+              </FormField>
+            </div>
             <div className={styles.navBtns}>
               <button type="button" className="btn btnSecondary" disabled={loading} onClick={() => { setError(''); setFieldErrors({}); setStep(2); }}>Back</button>
               <button type="submit" className="btn btnPrimary" disabled={loading}>

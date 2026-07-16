@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api';
 import { clearAccessToken, getAccessToken } from '@/lib/auth';
 import FanDrawer from '@/components/FanDrawer/FanDrawer';
 import HelpDialog from '@/components/HelpDialog/HelpDialog';
+import Logo from '@/components/Logo/Logo';
 import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
 import styles from './Navbar.module.css';
 
@@ -61,7 +62,7 @@ export default function Navbar() {
     <>
       <header className={styles.navbar}>
         <div className={`container ${styles.inner}`}>
-          <Link href="/" className={styles.logo}>Alivestage</Link>
+          <Logo variant="full" href="/" size="md" />
 
           <div className={styles.right}>
             {!profile && (

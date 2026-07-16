@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import HelpDialog from '@/components/HelpDialog/HelpDialog';
+import Logo from '@/components/Logo/Logo';
 import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
 import styles from './ArtistSidebar.module.css';
 
@@ -39,9 +40,7 @@ export default function ArtistSidebar({ open, onClose, onSignOut, profile }) {
       <aside className={`${styles.sidebar} ${open ? styles.open : ''}`} aria-label="Artist navigation">
         <div className={styles.top}>
           <div className={styles.brandBlock}>
-            <Link href="/dashboard" className={styles.logo} onClick={onClose}>
-              Alivestage
-            </Link>
+            <Logo variant="full" href="/dashboard" size="md" onClick={onClose} />
             <div className={styles.profile} title={profile?.email || profile?.name}>
               <ProfileAvatar profile={profile} size="sm" />
               <span className={styles.profileName}>{profile?.name || 'Artist'}</span>

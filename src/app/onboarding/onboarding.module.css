@@ -6,31 +6,34 @@
 
 .card {
   width: 100%;
-  max-width: 560px;
+  max-width: 760px;
 }
 
 .steps {
   display: flex;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   margin-bottom: var(--space-xl);
+  flex-wrap: wrap;
 }
 
 .stepDot {
   font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg);
+  color: var(--text-secondary);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
 }
 
 .stepActive {
-  color: var(--color-primary);
-  background: var(--status-completed-bg);
+  color: var(--accent-primary);
+  background: rgba(255, 107, 53, 0.12);
+  border-color: rgba(255, 107, 53, 0.35);
   font-weight: 600;
 }
 
 .subtitle {
-  color: var(--color-text-muted);
+  color: var(--text-secondary);
   margin-bottom: var(--space-xl);
 }
 
@@ -41,23 +44,34 @@
 }
 
 .genreBtn {
-  padding: 0.375rem 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
   font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.genreBtn:hover {
+  border-color: var(--text-muted);
 }
 
 .genreSelected {
-  border-color: var(--color-primary);
-  background: var(--status-completed-bg);
-  color: var(--color-primary);
+  border-color: var(--accent-primary);
+  background: rgba(255, 107, 53, 0.12);
+  color: var(--accent-primary);
+  font-weight: 600;
 }
 
 .navBtns {
   display: flex;
   gap: var(--space-md);
   justify-content: flex-end;
+  padding-top: var(--space-lg);
+  margin-top: var(--space-md);
+  border-top: 1px solid var(--border);
 }
 
 .textarea {
@@ -71,11 +85,19 @@
   border-radius: 50%;
   object-fit: cover;
   margin-bottom: var(--space-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border);
 }
 
 .linkRow {
   display: grid;
+  grid-template-columns: 1fr auto;
   gap: var(--space-sm);
+  align-items: end;
   margin-bottom: var(--space-sm);
+}
+
+@media (max-width: 560px) {
+  .linkRow {
+    grid-template-columns: 1fr;
+  }
 }

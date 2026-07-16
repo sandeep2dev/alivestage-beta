@@ -1,0 +1,63 @@
+.link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.link:hover {
+  text-decoration: none;
+  color: var(--accent-primary);
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.link:hover .logo {
+  color: var(--accent-primary);
+}
+
+.icon {
+  display: block;
+  flex-shrink: 0;
+  width: auto;
+  height: 100%;
+}
+
+.wordmark {
+  font-family: var(--font-display), 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: var(--accent-primary);
+}
+
+/* Size = icon height; wordmark scales with it */
+.sm {
+  height: 1.5rem;
+}
+
+.sm .wordmark {
+  font-size: 1rem;
+}
+
+.md {
+  height: 1.85rem;
+}
+
+.md .wordmark {
+  font-size: 1.25rem;
+}
+
+.lg {
+  height: 2.35rem;
+}
+
+.lg .wordmark {
+  font-size: 1.5rem;
+}

@@ -111,8 +111,8 @@
 }
 
 .active {
-  background: var(--status-completed-bg);
-  color: var(--color-primary);
+  background: rgba(255, 107, 53, 0.12);
+  color: var(--accent-primary);
 }
 
 .footer {

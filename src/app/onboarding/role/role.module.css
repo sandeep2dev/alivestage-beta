@@ -36,6 +36,6 @@
 }
 
 .selected {
-  border-color: var(--color-primary);
-  background: var(--status-completed-bg);
+  border-color: var(--accent-primary);
+  background: rgba(255, 107, 53, 0.12);
 }

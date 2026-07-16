@@ -13,18 +13,6 @@
   height: 4rem;
 }
 
-.logo {
-  font-size: var(--font-size-xl);
-  font-weight: 700;
-  color: var(--color-text);
-  text-decoration: none;
-}
-
-.logo:hover {
-  text-decoration: none;
-  color: var(--color-primary);
-}
-
 .right {
   display: flex;
   align-items: center;

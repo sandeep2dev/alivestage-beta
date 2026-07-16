@@ -9,8 +9,8 @@
 }
 
 .initials {
-  background: var(--status-completed-bg);
-  color: var(--color-primary);
+  background: rgba(255, 107, 53, 0.14);
+  color: var(--accent-primary);
   font-weight: 700;
   line-height: 1;
 }

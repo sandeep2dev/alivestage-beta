@@ -7,6 +7,7 @@ import { getAccessToken, setAccessToken } from '@/lib/auth';
 import { imageToUploadPayload } from '@/lib/image';
 import { isYoutubeUrl, lengthBetween, parseMoney } from '@/lib/validators';
 import CitySelect from '@/components/CitySelect/CitySelect';
+import FileUpload from '@/components/FileUpload/FileUpload';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
 import styles from '../dashboard.module.css';
@@ -202,100 +203,125 @@ export default function ArtistSettingsPage() {
       <FormAlert type="error">{error}</FormAlert>
       <FormAlert type="success">{message}</FormAlert>
 
-      <form className={`card ${styles.settingsForm}`} onSubmit={handleSubmit}>
-        <FormField label="Bio" error={fieldErrors.bio} id="bio">
-          <textarea
-            className="input"
-            rows={4}
-            value={form.bio}
-            onChange={(e) => setForm({ ...form, bio: e.target.value })}
-          />
-        </FormField>
+      <form className={`card ${styles.wideForm}`} onSubmit={handleSubmit} noValidate>
+        <section className="formSection">
+          <h2 className="formSectionTitle">Profile</h2>
+          <p className="formSectionHint">How you appear to fans on Alivestage</p>
 
-        <FormField label="City" error={fieldErrors.cityId} id="city">
-          <CitySelect
-            value={form.cityId}
-            onChange={(cityId) => setForm({ ...form, cityId })}
-          />
-        </FormField>
-
-        <FormField label="Avatar" error={fieldErrors.avatar} id="avatar">
-          {({ id, ...fieldProps }) => (
-            <div>
-              {previewSrc && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewSrc} alt="" className={styles.avatarPreview} />
-              )}
-              <input
-                id={id}
-                type="file"
-                accept="image/*"
-                onChange={onAvatarChange}
-                aria-invalid={fieldProps['aria-invalid']}
-                aria-describedby={fieldProps['aria-describedby']}
-              />
+          <div className="formGrid2">
+            <div className="formSpanFull">
+              <FormField label="Profile photo" error={fieldErrors.avatar} id="avatar" hint="JPG or PNG, up to 8 MB">
+                {({ id, ...fieldProps }) => (
+                  <FileUpload
+                    id={id}
+                    previewSrc={previewSrc}
+                    previewAlt="Profile photo"
+                    fileName={avatarFile?.name || ''}
+                    onChange={onAvatarChange}
+                    aria-invalid={fieldProps['aria-invalid']}
+                    aria-describedby={fieldProps['aria-describedby']}
+                  />
+                )}
+              </FormField>
             </div>
-          )}
-        </FormField>
 
-        <FormField label="Genres" error={fieldErrors.genres}>
-          <div className={styles.genreGrid}>
-            {GENRES.map((g) => (
-              <button
-                key={g}
-                type="button"
-                className={`${styles.genreChip} ${form.genres.includes(g) ? styles.genreActive : ''}`}
-                onClick={() => toggleGenre(g)}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
-        </FormField>
+            <div className="formSpanFull">
+              <FormField label="Bio" error={fieldErrors.bio} id="bio" hint="20–1000 characters" required>
+                <textarea
+                  className="textarea"
+                  rows={5}
+                  maxLength={1000}
+                  value={form.bio}
+                  onChange={(e) => setForm({ ...form, bio: e.target.value })}
+                />
+              </FormField>
+            </div>
 
-        <FormField label="YouTube links" error={fieldErrors.youtubeLinks}>
-          {form.youtubeLinks.map((link, index) => (
-            <div key={index} className={styles.linkRow}>
-              <input
-                className="input"
-                value={link}
-                placeholder="https://youtube.com/..."
-                onChange={(e) => updateYoutubeLink(index, e.target.value)}
+            <FormField label="Base city" error={fieldErrors.cityId} id="city" required>
+              <CitySelect
+                value={form.cityId}
+                onChange={(cityId) => setForm({ ...form, cityId })}
+                placeholder="Select your base city"
               />
-              {form.youtubeLinks.length > 1 && (
-                <button type="button" className="btn btnSecondary" onClick={() => removeYoutubeLink(index)}>
-                  Remove
+            </FormField>
+          </div>
+        </section>
+
+        <section className="formSection">
+          <h2 className="formSectionTitle">Portfolio</h2>
+          <p className="formSectionHint">Genres and performance videos</p>
+
+          <FormField label="Genres" error={fieldErrors.genres} required>
+            <div className={styles.genreGrid}>
+              {GENRES.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  className={`${styles.genreChip} ${form.genres.includes(g) ? styles.genreActive : ''}`}
+                  onClick={() => toggleGenre(g)}
+                  aria-pressed={form.genres.includes(g)}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </FormField>
+
+          <FormField label="YouTube links" error={fieldErrors.youtubeLinks} hint="Optional. Up to 5 valid YouTube URLs.">
+            <div className={styles.linkStack}>
+              {form.youtubeLinks.map((link, index) => (
+                <div key={index} className={styles.linkRow}>
+                  <input
+                    className="input"
+                    value={link}
+                    placeholder="https://youtube.com/..."
+                    onChange={(e) => updateYoutubeLink(index, e.target.value)}
+                  />
+                  {form.youtubeLinks.length > 1 && (
+                    <button type="button" className="btn btnSecondary" onClick={() => removeYoutubeLink(index)}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              {form.youtubeLinks.length < MAX_LINKS && (
+                <button type="button" className="btn btnSecondary" onClick={addYoutubeLink}>
+                  Add link
                 </button>
               )}
             </div>
-          ))}
-          {form.youtubeLinks.length < MAX_LINKS && (
-            <button type="button" className="btn btnSecondary" onClick={addYoutubeLink}>
-              Add link
-            </button>
-          )}
-        </FormField>
+          </FormField>
+        </section>
 
-        <div className={styles.rateRow}>
-          <FormField label="Minimum booking (₹)" error={fieldErrors.minBookingAmount} id="min">
-            <input
-              className="input"
-              value={form.minBookingAmount}
-              onChange={(e) => setForm({ ...form, minBookingAmount: e.target.value })}
-            />
-          </FormField>
-          <FormField label="Hourly rate (₹)" error={fieldErrors.hourlyRate} id="rate">
-            <input
-              className="input"
-              value={form.hourlyRate}
-              onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
-            />
-          </FormField>
+        <section className="formSection">
+          <h2 className="formSectionTitle">Rates</h2>
+          <p className="formSectionHint">Whole rupees. Used for booking cost estimates.</p>
+
+          <div className="formGrid2">
+            <FormField label="Minimum booking (₹)" error={fieldErrors.minBookingAmount} id="min" required>
+              <input
+                className="input"
+                inputMode="numeric"
+                value={form.minBookingAmount}
+                onChange={(e) => setForm({ ...form, minBookingAmount: e.target.value })}
+              />
+            </FormField>
+            <FormField label="Hourly rate (₹)" error={fieldErrors.hourlyRate} id="rate" required>
+              <input
+                className="input"
+                inputMode="numeric"
+                value={form.hourlyRate}
+                onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
+              />
+            </FormField>
+          </div>
+        </section>
+
+        <div className="formActions">
+          <button type="submit" className="btn btnPrimary" disabled={loading}>
+            {loading ? 'Saving...' : 'Save settings'}
+          </button>
         </div>
-
-        <button type="submit" className="btn btnPrimary" disabled={loading}>
-          {loading ? 'Saving...' : 'Save settings'}
-        </button>
       </form>
     </div>
   );
