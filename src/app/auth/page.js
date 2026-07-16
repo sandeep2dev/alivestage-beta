@@ -129,7 +129,11 @@ export default function AuthPage() {
         return;
       }
 
-      router.push('/dashboard');
+      if (profile?.role === 'artist') {
+        router.push('/dashboard');
+      } else {
+        router.push('/my-bookings');
+      }
       router.refresh();
     } catch (err) {
       setError(err.message);

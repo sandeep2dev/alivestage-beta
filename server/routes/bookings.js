@@ -7,6 +7,113 @@ const { sendMail, bookingRequestHtml, bookingAcceptedHtml, bookingRejectedHtml }
 const router = express.Router();
 const TOKEN_RATIO = 0.2;
 
+router.post('/manual', requireAuth, requireRole('artist'), async (req, res) => {
+  try {
+    const {
+      guestName,
+      eventDetails,
+      venueCityId,
+      venueLocation,
+      eventDate,
+      durationHours,
+      totalAmount,
+    } = req.body || {};
+
+    if (!guestName || !eventDetails || !venueCityId || !venueLocation || !eventDate || !durationHours || totalAmount == null) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    const name = String(guestName).trim();
+    if (name.length < 2 || name.length > 80) {
+      return res.status(400).json({ message: 'Guest name must be 2–80 characters' });
+    }
+
+    const details = String(eventDetails).trim();
+    if (details.length < 10 || details.length > 2000) {
+      return res.status(400).json({ message: 'Event details must be 10–2000 characters' });
+    }
+
+    const address = String(venueLocation).trim();
+    if (address.length < 5 || address.length > 500) {
+      return res.status(400).json({ message: 'Venue address must be 5–500 characters' });
+    }
+
+    const hours = Number(durationHours);
+    if (!Number.isFinite(hours) || hours < 1 || hours > 24) {
+      return res.status(400).json({ message: 'Duration must be between 1 and 24 hours' });
+    }
+
+    const amount = Number(totalAmount);
+    if (!Number.isFinite(amount) || amount < 1) {
+      return res.status(400).json({ message: 'Total amount must be at least ₹1' });
+    }
+
+    const eventDateObj = new Date(eventDate);
+    if (Number.isNaN(eventDateObj.getTime())) {
+      return res.status(400).json({ message: 'Invalid event date' });
+    }
+
+    const { data: venueCity } = await supabase
+      .from('cities')
+      .select('id, name, state')
+      .eq('id', venueCityId)
+      .maybeSingle();
+    if (!venueCity) {
+      return res.status(400).json({ message: 'Invalid venue city' });
+    }
+
+    const { data: artist } = await supabase
+      .from('artist_details')
+      .select('id, is_onboarded')
+      .eq('id', req.profile.id)
+      .eq('is_onboarded', true)
+      .maybeSingle();
+    if (!artist) {
+      return res.status(400).json({ message: 'Complete onboarding before adding bookings' });
+    }
+
+    const deadline = eventDateObj.toISOString();
+
+    const { data: booking, error: bookingError } = await supabase
+      .from('bookings')
+      .insert({
+        fan_id: null,
+        artist_id: req.profile.id,
+        guest_name: name,
+        source: 'artist_manual',
+        event_details: details,
+        venue_city_id: venueCityId,
+        venue_location: address,
+        event_date: eventDateObj.toISOString(),
+        duration_hours: hours,
+        total_amount: Math.round(amount * 100) / 100,
+        token_amount: 0,
+        remaining_amount: 0,
+        commission_rate_snapshot: 0,
+        artist_response_deadline: deadline,
+        balance_due_deadline: deadline,
+        status: 'confirmed',
+      })
+      .select(`
+        *,
+        fan:profiles!bookings_fan_id_fkey(id, name, email),
+        artist:profiles!bookings_artist_id_fkey(id, name, email),
+        venue_city:cities!bookings_venue_city_id_fkey(id, name, state, tier),
+        payments(*)
+      `)
+      .single();
+
+    if (bookingError) {
+      return res.status(500).json({ message: bookingError.message });
+    }
+
+    res.status(201).json(booking);
+  } catch (err) {
+    console.error('[bookings/manual]', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.post('/create', requireAuth, requireRole('fan'), async (req, res) => {
   try {
     const { artistId, eventDetails, venueCityId, venueLocation, eventDate, durationHours } = req.body;
@@ -64,6 +171,7 @@ router.post('/create', requireAuth, requireRole('fan'), async (req, res) => {
         artist_response_deadline: artistResponseDeadline.toISOString(),
         balance_due_deadline: balanceDueDeadline.toISOString(),
         status: 'pending',
+        source: 'platform',
       })
       .select()
       .single();

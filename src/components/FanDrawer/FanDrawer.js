@@ -8,7 +8,7 @@ import styles from './FanDrawer.module.css';
 
 const LINKS = [
   { href: '/', label: 'Home' },
-  { href: '/dashboard', label: 'My bookings' },
+  { href: '/my-bookings', label: 'My bookings' },
   { href: '/transactions', label: 'Transactions' },
   { href: '/profile', label: 'Profile' },
 ];

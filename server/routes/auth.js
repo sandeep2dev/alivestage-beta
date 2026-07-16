@@ -96,7 +96,7 @@ router.get('/me', requireAuth, async (req, res) => {
   if (req.profile.role === 'artist') {
     const { data } = await supabase
       .from('artist_details')
-      .select('is_onboarded')
+      .select('is_onboarded, bio, city_id, genres, youtube_links, min_booking_amount, hourly_rate')
       .eq('id', req.profile.id)
       .maybeSingle();
     artistDetails = data;
@@ -299,6 +299,112 @@ router.post('/onboarding/step3', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[auth/onboarding/step3]', err);
     res.status(500).json({ message: err.message || 'Failed to complete onboarding' });
+  }
+});
+
+router.patch('/artist-settings', requireAuth, async (req, res) => {
+  try {
+    if (req.profile.role !== 'artist') {
+      return res.status(403).json({ message: 'Artist only' });
+    }
+
+    const {
+      bio,
+      cityId,
+      avatarBase64,
+      avatarFileName,
+      genres,
+      youtubeLinks,
+      minBookingAmount,
+      hourlyRate,
+    } = req.body || {};
+
+    if (!bio || String(bio).trim().length < 20) {
+      return res.status(400).json({ message: 'Bio must be at least 20 characters' });
+    }
+    if (String(bio).trim().length > 1000) {
+      return res.status(400).json({ message: 'Bio must be at most 1000 characters' });
+    }
+    if (!cityId) {
+      return res.status(400).json({ message: 'City is required' });
+    }
+
+    const genreList = Array.isArray(genres) ? genres : [];
+    if (genreList.length < 1) {
+      return res.status(400).json({ message: 'Select at least one genre' });
+    }
+
+    const links = Array.isArray(youtubeLinks)
+      ? youtubeLinks.map((l) => String(l || '').trim()).filter(Boolean)
+      : [];
+
+    const minAmount = Number(minBookingAmount);
+    const rate = Number(hourlyRate);
+    if (!Number.isFinite(minAmount) || minAmount < 1) {
+      return res.status(400).json({ message: 'Invalid minimum booking amount' });
+    }
+    if (!Number.isFinite(rate) || rate < 1) {
+      return res.status(400).json({ message: 'Invalid hourly rate' });
+    }
+
+    const { data: cityRow, error: cityError } = await supabase
+      .from('cities')
+      .select('id')
+      .eq('id', cityId)
+      .maybeSingle();
+    if (cityError) throw cityError;
+    if (!cityRow) {
+      return res.status(400).json({ message: 'Invalid city' });
+    }
+
+    let avatarUrl = req.profile.avatar_url || '';
+
+    if (avatarBase64 && avatarFileName) {
+      const match = avatarBase64.match(/^data:([^;]+);base64,(.+)$/);
+      const contentType = match ? match[1] : 'image/jpeg';
+      const base64Data = match ? match[2] : avatarBase64;
+      const buffer = Buffer.from(base64Data, 'base64');
+      const ext = String(avatarFileName).split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
+      const path = `${req.profile.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, buffer, { upsert: true, contentType });
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+      avatarUrl = `${data.publicUrl}?t=${Date.now()}`;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', req.profile.id)
+      .select('*')
+      .single();
+    if (profileError) throw profileError;
+
+    const { data: artistDetails, error: detailsError } = await supabase
+      .from('artist_details')
+      .update({
+        bio: String(bio).trim(),
+        city_id: cityId,
+        genres: genreList,
+        youtube_links: links,
+        min_booking_amount: minAmount,
+        hourly_rate: rate,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.profile.id)
+      .select('is_onboarded, bio, city_id, genres, youtube_links, min_booking_amount, hourly_rate')
+      .single();
+    if (detailsError) throw detailsError;
+
+    const accessToken = signToken(profile);
+    res.json({ profile, artistDetails, accessToken });
+  } catch (err) {
+    console.error('[auth/artist-settings]', err);
+    res.status(500).json({ message: err.message || 'Failed to update settings' });
   }
 });
 

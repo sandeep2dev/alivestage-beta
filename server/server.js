@@ -25,6 +25,7 @@ app.use('/api/cities', require('./routes/cities'));
 app.use('/api/artists', artistsRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/transactions', require('./routes/transactions'));
+app.use('/api/earnings', require('./routes/earnings'));
 app.use('/api/support', require('./routes/support'));
 app.use('/api/admin', adminRouter);
 

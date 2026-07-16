@@ -17,6 +17,8 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
+  const isArtistDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
+
   useEffect(() => {
     async function load() {
       const token = getAccessToken();
@@ -50,6 +52,11 @@ export default function Navbar() {
   const isArtist = profile?.role === 'artist';
   const isAdmin = profile && ['admin', 'superadmin'].includes(profile.role);
 
+  // Artist dashboard owns its chrome (sidebar); no top navbar there.
+  if (isArtist && isArtistDashboard) {
+    return null;
+  }
+
   return (
     <>
       <header className={styles.navbar}>
@@ -66,15 +73,9 @@ export default function Navbar() {
             )}
 
             {isArtist && profile && (
-              <div className={styles.artistMenu}>
-                <div className={styles.artistChip} title={profile.email || profile.name}>
-                  <ProfileAvatar profile={profile} size="sm" />
-                  <span className={styles.artistName}>{profile.name || 'Artist'}</span>
-                </div>
-                <button type="button" className={styles.signOutLink} onClick={handleSignOut}>
-                  Sign out
-                </button>
-              </div>
+              <Link href="/dashboard" className={styles.dashboardLink}>
+                Dashboard
+              </Link>
             )}
 
             {isFan && profile && (

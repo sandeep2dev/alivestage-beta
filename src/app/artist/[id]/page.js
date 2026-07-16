@@ -144,7 +144,7 @@ export default function ArtistProfilePage() {
             razorpay_signature: 'mock',
           },
         });
-        router.push('/dashboard?booked=1');
+        router.push('/my-bookings?booked=1');
         return;
       }
 
@@ -166,7 +166,7 @@ export default function ArtistProfilePage() {
               razorpay_signature: response.razorpay_signature,
             },
           });
-          router.push('/dashboard?booked=1');
+          router.push('/my-bookings?booked=1');
         },
       });
     } catch (err) {

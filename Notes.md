@@ -1,5 +1,5 @@
 #profile page for fan
-#dashboard for artists 
+#dashboard for artists and it will have a fixed sidebar on left
     - Overview page -> showing upcoming gigs,
     - My booking page
     - Earnings page

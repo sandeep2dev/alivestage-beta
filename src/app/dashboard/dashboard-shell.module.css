@@ -1,0 +1,37 @@
+.shell {
+  min-height: 100vh;
+}
+
+.main {
+  margin-left: 240px;
+  min-height: 100vh;
+  padding: 0 var(--space-lg) var(--space-2xl);
+}
+
+.mobileMenu {
+  display: none;
+  position: fixed;
+  top: var(--space-md);
+  right: var(--space-md);
+  z-index: 80;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 0.4rem 0.75rem;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 900px) {
+  .main {
+    margin-left: 0;
+    padding: 3rem var(--space-md) var(--space-xl);
+  }
+
+  .mobileMenu {
+    display: inline-flex;
+  }
+}
