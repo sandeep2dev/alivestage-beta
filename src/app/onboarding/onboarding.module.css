@@ -1,5 +1,5 @@
 .page {
-  padding: var(--space-2xl) 0;
+  padding-block: var(--page-pad-y);
   display: flex;
   justify-content: center;
 }
@@ -52,6 +52,7 @@
   font-size: var(--font-size-sm);
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s, color 0.15s;
+  min-height: 2.5rem;
 }
 
 .genreBtn:hover {
@@ -96,8 +97,34 @@
   margin-bottom: var(--space-sm);
 }
 
-@media (max-width: 560px) {
+@media (max-width: 640px) {
+  .card {
+    max-width: none;
+  }
+
+  .steps {
+    margin-bottom: var(--space-lg);
+    gap: var(--space-xs);
+  }
+
+  .stepDot {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.55rem;
+  }
+
+  .subtitle {
+    margin-bottom: var(--space-lg);
+  }
+
   .linkRow {
     grid-template-columns: 1fr;
+  }
+
+  .navBtns {
+    flex-direction: column-reverse;
+  }
+
+  .navBtns .btn {
+    width: 100%;
   }
 }

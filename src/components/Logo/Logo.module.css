@@ -61,3 +61,13 @@
 .lg .wordmark {
   font-size: 1.5rem;
 }
+
+@media (max-width: 640px) {
+  .md {
+    height: 1.6rem;
+  }
+
+  .md .wordmark {
+    font-size: 1.05rem;
+  }
+}

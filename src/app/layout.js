@@ -19,7 +19,6 @@ export const metadata = {
   title: 'Alivestage — Live Performance Marketplace',
   description: 'Connect with live performance artists. Secure escrow bookings.',
   manifest: '/site.webmanifest',
-  themeColor: '#16171C',
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -28,6 +27,13 @@ export const metadata = {
     ],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#16171C',
 };
 
 export default function RootLayout({ children }) {

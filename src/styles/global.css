@@ -74,6 +74,15 @@
     0 16px 32px rgba(0, 0, 0, 0.6),
     0 32px 64px rgba(0, 0, 0, 0.5);
   --max-width: 1200px;
+
+  /* Breakpoints (documented for consistency — use these values in @media):
+     640px  phone / small tablet
+     900px  tablet / landscape
+     1200px desktop
+  */
+  --page-pad-x: var(--space-lg);
+  --page-pad-y: var(--space-2xl);
+  --touch-min: 2.75rem;
 }
 
 *,
@@ -88,6 +97,7 @@ html,
 body {
   min-height: 100%;
   color-scheme: dark;
+  overflow-x: clip;
 }
 
 body {
@@ -128,7 +138,7 @@ button {
   width: 100%;
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 0 var(--space-lg);
+  padding: 0 var(--page-pad-x);
 }
 
 .logoType {
@@ -142,6 +152,7 @@ button {
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
+  min-height: var(--touch-min);
   padding: 0.625rem 1.25rem;
   border: none;
   border-radius: var(--radius-md);
@@ -317,6 +328,10 @@ button {
 .wideForm .formGroup,
 .card .formGroup {
   margin-bottom: var(--space-md);
+
+  &.noBottomMargin {
+    margin-bottom: 0;
+  }
 }
 
 .card {
@@ -405,7 +420,7 @@ button {
 }
 
 .gridCols3 {
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
 }
 
 .table {
@@ -477,9 +492,166 @@ button {
   border-top: 1px solid var(--border);
 }
 
-@media (max-width: 720px) {
+/* Hybrid table ↔ card list (desktop table / mobile cards) */
+.desktopOnly {
+  display: block;
+}
+
+.mobileOnly {
+  display: none !important;
+}
+
+.dataCardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.dataCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.dataCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-md);
+  margin-bottom: var(--space-sm);
+}
+
+.dataCardTitle {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  margin: 0;
+  word-break: break-word;
+}
+
+.dataCardMeta {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-xs);
+}
+
+.dataCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.dataCardActions .btn {
+  flex: 1 1 auto;
+  min-width: 7rem;
+}
+
+.dataCardDetails {
+  margin-top: var(--space-md);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-sm);
+}
+
+.dataCardDetails summary {
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--accent-primary);
+  padding: var(--space-sm) 0;
+  list-style: none;
+  user-select: none;
+}
+
+.dataCardDetails summary::-webkit-details-marker {
+  display: none;
+}
+
+.dataCardDetails summary::after {
+  content: ' ▾';
+  font-size: 0.7em;
+}
+
+.dataCardDetails[open] summary::after {
+  content: ' ▴';
+}
+
+.dataCardDl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-xs) var(--space-md);
+  margin: var(--space-sm) 0 0;
+  font-size: var(--font-size-sm);
+}
+
+.dataCardDl dt {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.dataCardDl dd {
+  margin: 0;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .desktopOnly {
+    display: none !important;
+  }
+
+  .mobileOnly {
+    display: flex;
+    flex-direction: column;
+  }
+
   .formGrid2,
   .formGrid3 {
     grid-template-columns: 1fr;
+  }
+
+  .formActions {
+    flex-direction: column-reverse;
+  }
+
+  .formActions .btn {
+    width: 100%;
+  }
+
+  .gridCols3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-pad-x: 1.25rem;
+    --page-pad-y: var(--space-xl);
+    --font-size-3xl: 1.625rem;
+    --font-size-2xl: 1.35rem;
+  }
+
+  .pageTitle {
+    margin-bottom: var(--space-xs);
+  }
+
+  .pageSubtitle {
+    margin-bottom: var(--space-lg);
+  }
+
+  .card {
+    padding: var(--space-md);
+  }
+
+  .input,
+  .select,
+  .textarea {
+    font-size: 1rem; /* avoid iOS zoom on focus */
+    min-height: var(--touch-min);
+  }
+
+  .textarea {
+    min-height: 6rem;
   }
 }

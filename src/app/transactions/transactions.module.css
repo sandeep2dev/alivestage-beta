@@ -1,5 +1,5 @@
 .page {
-  padding: var(--space-2xl) 0;
+  padding-block: var(--page-pad-y);
 }
 
 .empty {
@@ -51,11 +51,17 @@
 }
 
 @media (max-width: 640px) {
+  .card {
+    padding: var(--space-md);
+  }
+
   .row {
     flex-direction: column;
+    gap: var(--space-md);
   }
 
   .right {
     align-items: flex-start;
+    width: 100%;
   }
 }

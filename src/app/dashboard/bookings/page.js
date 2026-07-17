@@ -75,6 +75,52 @@ export default function ArtistBookingsPage() {
     return b.fan?.name || b.guest_name || 'Guest';
   }
 
+  function venueLabel(b) {
+    return [
+      formatCityLabel(b.venue_city),
+      b.venue_location,
+    ].filter(Boolean).join(' — ') || '—';
+  }
+
+  function renderActions(b, busy) {
+    if (b.status === 'pending' && b.source !== 'artist_manual') {
+      return (
+        <div className={styles.tableActions}>
+          <button
+            type="button"
+            className="btn btnPrimary"
+            disabled={busy}
+            aria-busy={busy || undefined}
+            onClick={() => setConfirm({
+              type: 'accept',
+              id: b.id,
+              title: 'Accept booking?',
+              message: 'The fan will be asked to pay the remaining balance.',
+              confirmLabel: 'Accept',
+            })}
+          >
+            {busy ? '...' : 'Accept'}
+          </button>
+          <button
+            type="button"
+            className="btn btnDanger"
+            disabled={busy}
+            onClick={() => setConfirm({
+              type: 'reject',
+              id: b.id,
+              title: 'Reject booking?',
+              message: 'The fan’s token payment will be refunded.',
+              confirmLabel: 'Reject',
+            })}
+          >
+            {busy ? '...' : 'Reject'}
+          </button>
+        </div>
+      );
+    }
+    return <span className={styles.meta}>—</span>;
+  }
+
   if (loading) return <div className={styles.page}><p>Loading...</p></div>;
 
   const busyId = actionLoading;
@@ -92,84 +138,85 @@ export default function ArtistBookingsPage() {
           <p>No bookings yet.</p>
         </div>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Guest / Fan</th>
-                <th>Event</th>
-                <th>Venue</th>
-                <th>Date</th>
-                <th>Amount</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((b) => {
-                const busy = busyId === b.id;
-                const venue = [
-                  formatCityLabel(b.venue_city),
-                  b.venue_location,
-                ].filter(Boolean).join(' — ') || '—';
+        <>
+          <div className={`desktopOnly ${styles.tableWrap}`}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Guest / Fan</th>
+                  <th>Event</th>
+                  <th>Venue</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Source</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map((b) => {
+                  const busy = busyId === b.id;
+                  return (
+                    <tr key={b.id}>
+                      <td>{counterpartyName(b)}</td>
+                      <td className={styles.cellClamp}>{b.event_details}</td>
+                      <td className={styles.cellClamp}>{venueLabel(b)}</td>
+                      <td>{new Date(b.event_date).toLocaleString()}</td>
+                      <td>₹{Number(b.total_amount).toLocaleString()}</td>
+                      <td>{b.source === 'artist_manual' ? 'Offline' : 'Platform'}</td>
+                      <td>
+                        <span className={`statusBadge ${statusClass(b.status)}`}>
+                          {statusLabel(b.status)}
+                        </span>
+                      </td>
+                      <td>{renderActions(b, busy)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-                return (
-                  <tr key={b.id}>
-                    <td>{counterpartyName(b)}</td>
-                    <td className={styles.cellClamp}>{b.event_details}</td>
-                    <td className={styles.cellClamp}>{venue}</td>
-                    <td>{new Date(b.event_date).toLocaleString()}</td>
-                    <td>₹{Number(b.total_amount).toLocaleString()}</td>
-                    <td>{b.source === 'artist_manual' ? 'Offline' : 'Platform'}</td>
-                    <td>
-                      <span className={`statusBadge ${statusClass(b.status)}`}>
-                        {statusLabel(b.status)}
-                      </span>
-                    </td>
-                    <td>
-                      {b.status === 'pending' && b.source !== 'artist_manual' ? (
-                        <div className={styles.tableActions}>
-                          <button
-                            type="button"
-                            className="btn btnPrimary"
-                            disabled={busy}
-                            aria-busy={busy || undefined}
-                            onClick={() => setConfirm({
-                              type: 'accept',
-                              id: b.id,
-                              title: 'Accept booking?',
-                              message: 'The fan will be asked to pay the remaining balance.',
-                              confirmLabel: 'Accept',
-                            })}
-                          >
-                            {busy ? '...' : 'Accept'}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btnDanger"
-                            disabled={busy}
-                            onClick={() => setConfirm({
-                              type: 'reject',
-                              id: b.id,
-                              title: 'Reject booking?',
-                              message: 'The fan’s token payment will be refunded.',
-                              confirmLabel: 'Reject',
-                            })}
-                          >
-                            {busy ? '...' : 'Reject'}
-                          </button>
-                        </div>
-                      ) : (
-                        <span className={styles.meta}>—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+          <div className="mobileOnly dataCardList">
+            {bookings.map((b) => {
+              const busy = busyId === b.id;
+              const hasActions = b.status === 'pending' && b.source !== 'artist_manual';
+              return (
+                <article key={b.id} className="dataCard">
+                  <div className="dataCardTop">
+                    <div>
+                      <h3 className="dataCardTitle">{counterpartyName(b)}</h3>
+                      <p className="dataCardMeta">
+                        {new Date(b.event_date).toLocaleString()} · ₹{Number(b.total_amount).toLocaleString()}
+                      </p>
+                    </div>
+                    <span className={`statusBadge ${statusClass(b.status)}`}>
+                      {statusLabel(b.status)}
+                    </span>
+                  </div>
+
+                  {hasActions && (
+                    <div className="dataCardActions">
+                      {renderActions(b, busy)}
+                    </div>
+                  )}
+
+                  <details className="dataCardDetails">
+                    <summary>Details</summary>
+                    <dl className="dataCardDl">
+                      <dt>Event</dt>
+                      <dd>{b.event_details || '—'}</dd>
+                      <dt>Venue</dt>
+                      <dd>{venueLabel(b)}</dd>
+                      <dt>Source</dt>
+                      <dd>{b.source === 'artist_manual' ? 'Offline' : 'Platform'}</dd>
+                    </dl>
+                  </details>
+                </article>
+              );
+            })}
+          </div>
+        </>
       )}
 
       <ConfirmationModal

@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import styles from './admin.module.css';
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [profile, setProfile] = useState(null);
   const [ready, setReady] = useState(false);
 
@@ -37,14 +38,27 @@ export default function AdminLayout({ children }) {
     return <div className="container"><p>Loading...</p></div>;
   }
 
+  const bookingsActive = pathname === '/admin';
+  const settingsActive = pathname.startsWith('/admin/settings');
+
   return (
     <div className={styles.adminLayout}>
       <aside className={styles.sidebar}>
         <h2 className={styles.sidebarTitle}>Admin</h2>
         <nav className={styles.sidebarNav}>
-          <a href="/admin" className={styles.sidebarLink}>Bookings</a>
+          <a
+            href="/admin"
+            className={`${styles.sidebarLink} ${bookingsActive ? styles.sidebarLinkActive : ''}`}
+          >
+            Bookings
+          </a>
           {profile.role === 'superadmin' && (
-            <a href="/admin/settings" className={styles.sidebarLink}>Settings</a>
+            <a
+              href="/admin/settings"
+              className={`${styles.sidebarLink} ${settingsActive ? styles.sidebarLinkActive : ''}`}
+            >
+              Settings
+            </a>
           )}
         </nav>
       </aside>

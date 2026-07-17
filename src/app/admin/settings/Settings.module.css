@@ -42,10 +42,28 @@
   grid-column: 2 / -1;
 }
 
+@media (max-width: 900px) {
+  .artistRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .artistRow .fieldError {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 640px) {
   .commissionRow {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .inputWrap {
+    max-width: none;
+  }
+
+  .commissionRow .btn {
+    width: 100%;
   }
 
   .artistRow {
@@ -54,5 +72,9 @@
 
   .artistRow .fieldError {
     grid-column: 1;
+  }
+
+  .artistRow .btn {
+    width: 100%;
   }
 }

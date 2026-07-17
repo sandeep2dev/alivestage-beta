@@ -37,7 +37,11 @@ export default function ArtistSidebar({ open, onClose, onSignOut, profile }) {
           onClick={onClose}
         />
       )}
-      <aside className={`${styles.sidebar} ${open ? styles.open : ''}`} aria-label="Artist navigation">
+      <aside
+        id="artist-sidebar"
+        className={`${styles.sidebar} ${open ? styles.open : ''}`}
+        aria-label="Artist navigation"
+      >
         <div className={styles.top}>
           <div className={styles.brandBlock}>
             <Logo variant="full" href="/dashboard" size="md" onClick={onClose} />

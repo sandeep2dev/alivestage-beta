@@ -36,3 +36,26 @@
   gap: var(--space-md);
   justify-content: flex-end;
 }
+
+@media (max-width: 640px) {
+  .overlay {
+    padding: var(--space-md);
+    align-items: flex-end;
+  }
+
+  .modal {
+    padding: var(--space-lg);
+    max-width: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: min(90vh, 100%);
+    overflow-y: auto;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .actions .btn {
+    width: 100%;
+  }
+}

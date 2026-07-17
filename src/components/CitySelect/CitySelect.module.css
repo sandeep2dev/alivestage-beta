@@ -176,3 +176,15 @@
   font-size: var(--font-size-sm);
   text-align: center;
 }
+
+@media (max-width: 640px) {
+  .panel {
+    max-height: min(280px, 50vh);
+  }
+
+  .option {
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+  }
+}

@@ -7,6 +7,7 @@ export default function FormField({
   hint,
   required = false,
   children,
+  noBottomMargin = false,
 }) {
   const errorId = error ? `${id}-error` : undefined;
   const hintId = hint && !error ? `${id}-hint` : undefined;
@@ -36,7 +37,7 @@ export default function FormField({
   }
 
   return (
-    <div className="formGroup">
+    <div className={`formGroup ${noBottomMargin ? 'noBottomMargin' : ''}`}>
       {label && (
         <label className="label" htmlFor={id}>
           {label}

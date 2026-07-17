@@ -1,5 +1,5 @@
 .page {
-  padding: var(--space-2xl) 0;
+  padding-block: var(--page-pad-y);
 }
 
 .hero {
@@ -29,4 +29,28 @@
   text-align: center;
   color: var(--color-text-muted);
   padding: var(--space-2xl);
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    padding: var(--space-md);
+  }
+}
+
+@media (max-width: 640px) {
+  .filters {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+  }
+
+  .hero {
+    margin-bottom: var(--space-lg);
+  }
+
+  .empty {
+    padding: var(--space-xl) 0;
+  }
 }

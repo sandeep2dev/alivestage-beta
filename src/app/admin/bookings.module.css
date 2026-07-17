@@ -3,6 +3,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
+  -webkit-overflow-scrolling: touch;
 }
 
 .email {
@@ -19,4 +20,5 @@
 .actions .btn {
   padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
+  min-height: 2.25rem;
 }

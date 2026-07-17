@@ -49,40 +49,78 @@ export default function ArtistEarningsPage() {
           <p>No paid gigs yet.</p>
         </div>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Fan</th>
-                <th>Event</th>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Captured</th>
-                <th>Commission</th>
-                <th>Your payout</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {payments.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.counterparty}</td>
-                  <td className={styles.cellClamp}>{p.eventDetails || '—'}</td>
-                  <td>{p.eventDate ? new Date(p.eventDate).toLocaleString() : '—'}</td>
-                  <td>{paymentTypeLabel(p.paymentType)}</td>
-                  <td>₹{Number(p.amountCaptured).toLocaleString()}</td>
-                  <td>₹{Number(p.platformCommission).toLocaleString()}</td>
-                  <td>₹{Number(p.artistPayout).toLocaleString()}</td>
-                  <td>
-                    <span className={`statusBadge ${statusClass(p.status)}`}>
-                      {statusLabel(p.status)}
-                    </span>
-                  </td>
+        <>
+          <div className={`desktopOnly ${styles.tableWrap}`}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Fan</th>
+                  <th>Event</th>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Captured</th>
+                  <th>Commission</th>
+                  <th>Your payout</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.counterparty}</td>
+                    <td className={styles.cellClamp}>{p.eventDetails || '—'}</td>
+                    <td>{p.eventDate ? new Date(p.eventDate).toLocaleString() : '—'}</td>
+                    <td>{paymentTypeLabel(p.paymentType)}</td>
+                    <td>₹{Number(p.amountCaptured).toLocaleString()}</td>
+                    <td>₹{Number(p.platformCommission).toLocaleString()}</td>
+                    <td>₹{Number(p.artistPayout).toLocaleString()}</td>
+                    <td>
+                      <span className={`statusBadge ${statusClass(p.status)}`}>
+                        {statusLabel(p.status)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mobileOnly dataCardList">
+            {payments.map((p) => (
+              <article key={p.id} className="dataCard">
+                <div className="dataCardTop">
+                  <div>
+                    <h3 className="dataCardTitle">{p.counterparty}</h3>
+                    <p className="dataCardMeta">
+                      {p.eventDate ? new Date(p.eventDate).toLocaleDateString() : '—'}
+                      {' · '}
+                      ₹{Number(p.artistPayout).toLocaleString()} payout
+                    </p>
+                  </div>
+                  <span className={`statusBadge ${statusClass(p.status)}`}>
+                    {statusLabel(p.status)}
+                  </span>
+                </div>
+
+                <details className="dataCardDetails">
+                  <summary>Details</summary>
+                  <dl className="dataCardDl">
+                    <dt>Event</dt>
+                    <dd>{p.eventDetails || '—'}</dd>
+                    <dt>Type</dt>
+                    <dd>{paymentTypeLabel(p.paymentType)}</dd>
+                    <dt>Captured</dt>
+                    <dd>₹{Number(p.amountCaptured).toLocaleString()}</dd>
+                    <dt>Commission</dt>
+                    <dd>₹{Number(p.platformCommission).toLocaleString()}</dd>
+                    <dt>Your payout</dt>
+                    <dd>₹{Number(p.artistPayout).toLocaleString()}</dd>
+                  </dl>
+                </details>
+              </article>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { clearAccessToken, getAccessToken } from '@/lib/auth';
 import ArtistSidebar from '@/components/ArtistSidebar/ArtistSidebar';
+import Logo from '@/components/Logo/Logo';
 import styles from './dashboard-shell.module.css';
 
 export default function DashboardLayout({ children }) {
@@ -58,14 +59,23 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className={styles.shell}>
-      <button
-        type="button"
-        className={styles.mobileMenu}
-        onClick={() => setSidebarOpen(true)}
-        aria-label="Open menu"
-      >
-        Menu
-      </button>
+      <header className={styles.mobileBar}>
+        <Logo variant="full" href="/dashboard" size="md" />
+        <button
+          type="button"
+          className={styles.hamburger}
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+          aria-expanded={sidebarOpen}
+          aria-controls="artist-sidebar"
+        >
+          <span className={styles.hamburgerIcon} aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+        </button>
+      </header>
       <ArtistSidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

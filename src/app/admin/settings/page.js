@@ -140,7 +140,7 @@ export default function AdminSettingsPage() {
         <h2 className={styles.sectionTitle}>Commission Rate</h2>
         <div className={styles.commissionRow}>
           <div className={styles.inputWrap}>
-            <FormField id="commission" label="Platform commission (%)" required error={commissionError}>
+            <FormField id="commission" label="Platform commission (%)" required error={commissionError} noBottomMargin>
               <input
                 type="number"
                 className="input"

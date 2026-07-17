@@ -60,3 +60,23 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+@media (max-width: 640px) {
+  .inner {
+    height: 3.5rem;
+  }
+
+  .right {
+    gap: var(--space-sm);
+  }
+
+  .authBtn {
+    padding: 0.45rem 0.85rem;
+    min-height: 2.5rem;
+  }
+
+  .link,
+  .dashboardLink {
+    font-size: 0.8125rem;
+  }
+}

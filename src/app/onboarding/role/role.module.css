@@ -1,5 +1,5 @@
 .page {
-  padding: var(--space-2xl) 0;
+  padding-block: var(--page-pad-y);
   display: flex;
   justify-content: center;
 }
@@ -27,6 +27,7 @@
 
 .option input {
   margin-top: 0.25rem;
+  flex-shrink: 0;
 }
 
 .option p {
@@ -38,4 +39,18 @@
 .selected {
   border-color: var(--accent-primary);
   background: rgba(255, 107, 53, 0.12);
+}
+
+@media (max-width: 640px) {
+  .card {
+    max-width: none;
+  }
+
+  .subtitle {
+    margin-bottom: var(--space-lg);
+  }
+
+  .option {
+    padding: var(--space-md) var(--space-sm);
+  }
 }

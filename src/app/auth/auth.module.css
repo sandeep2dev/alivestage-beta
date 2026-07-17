@@ -1,5 +1,5 @@
 .page {
-  padding: var(--space-2xl) 0;
+  padding-block: var(--page-pad-y);
   display: flex;
   justify-content: center;
 }
@@ -17,4 +17,14 @@
 .backBtn {
   margin-top: var(--space-md);
   width: 100%;
+}
+
+@media (max-width: 640px) {
+  .card {
+    max-width: none;
+  }
+
+  .subtitle {
+    margin-bottom: var(--space-lg);
+  }
 }

@@ -75,11 +75,23 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-sm);
   font-weight: 600;
   font-size: var(--font-size-sm);
+  flex-wrap: wrap;
 }
 
 .minBooking {
   color: var(--color-text-muted);
   font-weight: 400;
+}
+
+@media (max-width: 640px) {
+  .body {
+    padding: var(--space-sm) var(--space-md) var(--space-md);
+  }
+
+  .name {
+    font-size: var(--font-size-base);
+  }
 }

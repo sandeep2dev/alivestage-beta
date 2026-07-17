@@ -123,3 +123,17 @@
 .footer .btn {
   width: 100%;
 }
+
+@media (max-width: 640px) {
+  .drawer {
+    width: min(360px, 100%);
+    padding: var(--space-lg);
+  }
+
+  .link,
+  .linkButton {
+    min-height: var(--touch-min);
+    display: flex;
+    align-items: center;
+  }
+}
