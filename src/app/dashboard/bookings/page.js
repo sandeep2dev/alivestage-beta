@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
@@ -56,12 +57,12 @@ export default function ArtistBookingsPage() {
     setError('');
     setMessage('');
     try {
-      if (type === 'accept') {
-        await withToken((token) => apiFetch(`/api/bookings/${id}/accept`, { method: 'POST', token }));
-        setMessage('Booking accepted.');
-      } else if (type === 'reject') {
-        await withToken((token) => apiFetch(`/api/bookings/${id}/reject`, { method: 'POST', token }));
-        setMessage('Booking rejected.');
+      if (type === 'confirm') {
+        await withToken((token) => apiFetch(`/api/bookings/${id}/confirm`, { method: 'POST', token }));
+        setMessage('Confirmed. The fan will be asked to pay the Alivestage fee.');
+      } else if (type === 'decline') {
+        await withToken((token) => apiFetch(`/api/bookings/${id}/decline`, { method: 'POST', token }));
+        setMessage('Booking declined.');
       }
       await loadData();
     } catch (err) {
@@ -83,42 +84,49 @@ export default function ArtistBookingsPage() {
   }
 
   function renderActions(b, busy) {
-    if (b.status === 'pending' && b.source !== 'artist_manual') {
+    if (b.status === 'requested' && b.source !== 'artist_manual') {
       return (
         <div className={styles.tableActions}>
+          <Link href={`/dashboard/bookings/${b.id}`} className="btn btnSecondary">
+            Details
+          </Link>
           <button
             type="button"
             className="btn btnPrimary"
             disabled={busy}
             aria-busy={busy || undefined}
             onClick={() => setConfirm({
-              type: 'accept',
+              type: 'confirm',
               id: b.id,
-              title: 'Accept booking?',
-              message: 'The fan will be asked to pay the remaining balance.',
-              confirmLabel: 'Accept',
+              title: 'Confirm booking?',
+              message: 'The fan will pay the 10% Alivestage fee to lock the booking. You collect your full fee directly from them.',
+              confirmLabel: 'Confirm',
             })}
           >
-            {busy ? '...' : 'Accept'}
+            {busy ? '...' : 'Confirm'}
           </button>
           <button
             type="button"
             className="btn btnDanger"
             disabled={busy}
             onClick={() => setConfirm({
-              type: 'reject',
+              type: 'decline',
               id: b.id,
-              title: 'Reject booking?',
-              message: 'The fan’s token payment will be refunded.',
-              confirmLabel: 'Reject',
+              title: 'Decline booking?',
+              message: 'The fan will be notified. No payment has been taken.',
+              confirmLabel: 'Decline',
             })}
           >
-            {busy ? '...' : 'Reject'}
+            {busy ? '...' : 'Decline'}
           </button>
         </div>
       );
     }
-    return <span className={styles.meta}>—</span>;
+    return (
+      <Link href={`/dashboard/bookings/${b.id}`} className="btn btnSecondary">
+        Details
+      </Link>
+    );
   }
 
   if (loading) return <div className={styles.page}><p>Loading...</p></div>;
@@ -180,7 +188,7 @@ export default function ArtistBookingsPage() {
           <div className="mobileOnly dataCardList">
             {bookings.map((b) => {
               const busy = busyId === b.id;
-              const hasActions = b.status === 'pending' && b.source !== 'artist_manual';
+              const hasActions = b.status === 'requested' && b.source !== 'artist_manual';
               return (
                 <article key={b.id} className="dataCard">
                   <div className="dataCardTop">
@@ -195,11 +203,13 @@ export default function ArtistBookingsPage() {
                     </span>
                   </div>
 
-                  {hasActions && (
-                    <div className="dataCardActions">
-                      {renderActions(b, busy)}
-                    </div>
-                  )}
+                  <div className="dataCardActions">
+                    {hasActions ? renderActions(b, busy) : (
+                      <Link href={`/dashboard/bookings/${b.id}`} className="btn btnSecondary">
+                        Details
+                      </Link>
+                    )}
+                  </div>
 
                   <details className="dataCardDetails">
                     <summary>Details</summary>

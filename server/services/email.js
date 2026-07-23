@@ -45,10 +45,10 @@ function bookingRequestHtml({ artistName, fanName, eventDate, eventDetails, venu
 
 function bookingAcceptedHtml({ fanName, artistName, remainingAmount }) {
   return `
-    <h2>Booking confirmed — pay remaining balance</h2>
+    <h2>Artist confirmed — pay Alivestage fee</h2>
     <p>Hi ${fanName},</p>
-    <p><strong>${artistName}</strong> has accepted your booking request.</p>
-    <p>Please pay the remaining balance of <strong>₹${remainingAmount}</strong> to secure your event.</p>
+    <p><strong>${artistName}</strong> has confirmed your booking request.</p>
+    <p>Pay the Alivestage fee of <strong>₹${remainingAmount}</strong> (10% of the booking value) to lock it in. Pay the artist their full performance fee directly, off-platform.</p>
   `;
 }
 
@@ -56,7 +56,7 @@ function bookingRejectedHtml({ fanName, artistName }) {
   return `
     <h2>Booking request declined</h2>
     <p>Hi ${fanName},</p>
-    <p><strong>${artistName}</strong> has declined your booking request. Your token payment will be refunded.</p>
+    <p><strong>${artistName}</strong> is unavailable for this request. You have not been charged.</p>
   `;
 }
 
@@ -64,7 +64,7 @@ function bookingAutoRejectedHtml({ fanName }) {
   return `
     <h2>Booking request expired</h2>
     <p>Hi ${fanName},</p>
-    <p>The artist did not respond within 48 hours. Your booking has been cancelled and your token refunded.</p>
+    <p>The artist did not respond within 48 hours. Your request has been closed. You were not charged.</p>
   `;
 }
 

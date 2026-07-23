@@ -40,7 +40,10 @@ async function createOrder({ amount, receipt, notes, artistLinkedAccountId, arti
     notes,
   };
 
-  if (artistLinkedAccountId && artistShare > 0) {
+  // Legacy Razorpay Route escrow — only when explicitly enabled.
+  // New booking flow does not pass linked accounts; leave this dead by default.
+  const routeEnabled = process.env.RAZORPAY_ROUTE_ENABLED === 'true';
+  if (routeEnabled && artistLinkedAccountId && artistShare > 0) {
     options.transfers = [{
       account: artistLinkedAccountId,
       amount: amountToPaise(artistShare),

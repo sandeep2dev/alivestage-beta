@@ -9,7 +9,7 @@ import { statusClass, statusLabel } from '@/lib/status';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import styles from './dashboard.module.css';
 
-const UPCOMING_STATUSES = new Set(['pending', 'confirmed']);
+const UPCOMING_STATUSES = new Set(['requested', 'awaiting_token', 'confirmed', 'pending']);
 
 function startOfMonth(d) {
   return new Date(d.getFullYear(), d.getMonth(), 1);

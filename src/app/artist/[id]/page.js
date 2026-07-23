@@ -15,9 +15,14 @@ import {
 import CitySelect from '@/components/CitySelect/CitySelect';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
+import WhatsAppVerify from '@/components/WhatsAppVerify/WhatsAppVerify';
 import styles from './artist.module.css';
 
-const TOKEN_RATIO = 0.2;
+const TOKEN_RATIO = 0.1;
+
+function hasVerifiedWhatsApp(p) {
+  return Boolean(p?.phone && p?.whatsapp_verified_at);
+}
 
 export default function ArtistProfilePage() {
   const { id } = useParams();
@@ -26,6 +31,8 @@ export default function ArtistProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showBookForm, setShowBookForm] = useState(false);
+  const [needsWhatsApp, setNeedsWhatsApp] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null);
   const [booking, setBooking] = useState({
     eventDetails: '',
     venueCityId: '',
@@ -73,10 +80,19 @@ export default function ArtistProfilePage() {
     if (!Number.isFinite(hours) || hours < 1) return null;
     const hourlyTotal = Number(artist.hourly_rate) * hours;
     const total = Math.max(Number(artist.min_booking_amount), hourlyTotal);
-    const token = Math.round(total * TOKEN_RATIO * 100) / 100;
-    const balance = Math.round((total - token) * 100) / 100;
-    return { total, token, balance };
+    const fee = Math.round(total * TOKEN_RATIO * 100) / 100;
+    return { total, fee };
   }, [artist, booking.durationHours]);
+
+  async function submitBooking(payload) {
+    const token = getAccessToken();
+    await apiFetch('/api/bookings/create', {
+      method: 'POST',
+      token,
+      body: payload,
+    });
+    router.push('/my-bookings?booked=1');
+  }
 
   async function handleBook(e) {
     e.preventDefault();
@@ -119,56 +135,45 @@ export default function ArtistProfilePage() {
       return;
     }
 
+    const payload = {
+      artistId: id,
+      eventDetails: details.value,
+      venueCityId: booking.venueCityId,
+      venueLocation: address.value,
+      eventDate: when.value,
+      durationHours: duration.value,
+    };
+
+    if (!hasVerifiedWhatsApp(profile)) {
+      setPendingPayload(payload);
+      setNeedsWhatsApp(true);
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      const result = await apiFetch('/api/bookings/create', {
-        method: 'POST',
-        token,
-        body: {
-          artistId: id,
-          eventDetails: details.value,
-          venueCityId: booking.venueCityId,
-          venueLocation: address.value,
-          eventDate: when.value,
-          durationHours: duration.value,
-        },
-      });
-
-      if (result.mock) {
-        await apiFetch('/api/bookings/verify-token', {
-          method: 'POST',
-          token,
-          body: {
-            bookingId: result.bookingId,
-            razorpay_order_id: result.orderId,
-            razorpay_payment_id: `mock_pay_${Date.now()}`,
-            razorpay_signature: 'mock',
-          },
-        });
-        router.push('/my-bookings?booked=1');
-        return;
+      await submitBooking(payload);
+    } catch (err) {
+      if (String(err.message || '').toLowerCase().includes('whatsapp')) {
+        setPendingPayload(payload);
+        setNeedsWhatsApp(true);
+      } else {
+        setError(err.message);
       }
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
-      const { openRazorpayCheckout } = await import('@/lib/api');
-      await openRazorpayCheckout({
-        key: result.key,
-        orderId: result.orderId,
-        amount: result.amount,
-        name: profile.name,
-        email: profile.email,
-        onSuccess: async (response) => {
-          await apiFetch('/api/bookings/verify-token', {
-            method: 'POST',
-            token,
-            body: {
-              bookingId: result.bookingId,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            },
-          });
-          router.push('/my-bookings?booked=1');
-        },
-      });
+  async function onWhatsAppVerified(updatedProfile) {
+    setProfile(updatedProfile);
+    setNeedsWhatsApp(false);
+    if (!pendingPayload) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await submitBooking(pendingPayload);
+      setPendingPayload(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -238,6 +243,28 @@ export default function ArtistProfilePage() {
           <p>Please <Link href="/auth">sign in</Link> as a fan to book.</p>
         ) : profile.role !== 'fan' ? (
           <p>Only fans can submit booking requests.</p>
+        ) : needsWhatsApp ? (
+          <div>
+            <p className={styles.tokenNote}>
+              Verify your WhatsApp number so the artist can reach you. This is required before we send the request.
+            </p>
+            <FormAlert type="error">{error}</FormAlert>
+            <WhatsAppVerify
+              initialPhone={profile.phone || ''}
+              onVerified={onWhatsAppVerified}
+              submitLabel="Verify & send request"
+            />
+            <div className={styles.bookActions} style={{ marginTop: '1rem' }}>
+              <button
+                type="button"
+                className="btn btnSecondary"
+                disabled={submitting}
+                onClick={() => { setNeedsWhatsApp(false); setPendingPayload(null); }}
+              >
+                Back to form
+              </button>
+            </div>
+          </div>
         ) : !showBookForm ? (
           <button type="button" className="btn btnPrimary" onClick={() => setShowBookForm(true)}>
             Start Booking
@@ -297,19 +324,20 @@ export default function ArtistProfilePage() {
 
             {costPreview && (
               <div className={styles.costPreview}>
-                <p><strong>Estimated total:</strong> ₹{costPreview.total.toLocaleString()}</p>
-                <p>Token due now (20%): ₹{costPreview.token.toLocaleString()}</p>
-                <p>Balance after acceptance: ₹{costPreview.balance.toLocaleString()}</p>
+                <p><strong>Artist fee:</strong> ₹{costPreview.total.toLocaleString()} (pay the artist directly after booking is locked)</p>
+                <p><strong>Alivestage fee (10%):</strong> ₹{costPreview.fee.toLocaleString()} — due after the artist confirms</p>
               </div>
             )}
 
-            <p className={styles.tokenNote}>A 20% token payment is required upfront. The balance is due after the artist accepts.</p>
+            <p className={styles.tokenNote}>
+              No payment now. We will notify the artist on WhatsApp. If they confirm, you pay the 10% Alivestage fee to lock the booking, then settle the artist fee off-platform.
+            </p>
             <div className={styles.bookActions}>
               <button type="button" className="btn btnSecondary" disabled={submitting} onClick={() => setShowBookForm(false)}>
                 Cancel
               </button>
               <button type="submit" className="btn btnPrimary" disabled={submitting}>
-                {submitting ? 'Processing...' : 'Pay Token & Submit'}
+                {submitting ? 'Sending...' : 'Send booking request'}
               </button>
             </div>
           </form>

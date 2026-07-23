@@ -1,6 +1,6 @@
 # Alivestage Platform
 
-Secure two-sided marketplace connecting fans with live performance artists. Built with Next.js, Supabase, and Razorpay escrow.
+Secure two-sided marketplace connecting fans with live performance artists. Built with Next.js, Supabase, and Razorpay (Alivestage fee). Artist performance fees are collected off-platform after booking is locked.
 
 ## Stack
 
@@ -8,7 +8,15 @@ Secure two-sided marketplace connecting fans with live performance artists. Buil
 - **Backend:** Node.js Express (`server/`)
 - **Database & Storage:** Supabase PostgreSQL + Storage (avatars)
 - **Auth:** Email OTP (custom, via Express + SMTP)
-- **Payments:** Razorpay Route (fund holds)
+- **WhatsApp:** Meta Cloud API (OTP verify + booking Confirm/Decline) — see `docs/WHATSAPP_TEMPLATES.md`
+- **Payments:** Razorpay standard orders for the 10% Alivestage commission token (Route escrow is legacy / flag-gated)
+
+## Booking model (current)
+
+1. Fan submits a request (requires verified WhatsApp on fan + artist).
+2. Artist confirms or declines via WhatsApp buttons or dashboard (same backend).
+3. Fan pays **10% of booking value** to Alivestage (commission) via Razorpay.
+4. Artist collects their **full** performance fee directly from the fan, off-platform.
 
 ## Setup
 
@@ -22,6 +30,7 @@ Secure two-sided marketplace connecting fans with live performance artists. Buil
    - `SUPABASE_SERVICE_ROLE_KEY` (use the **service_role** key, not anon)
    - `JWT_SECRET`
    - SMTP credentials (OTP emails use Nodemailer; leave `SMTP_HOST` empty to log OTP codes in the API console)
+   - WhatsApp Cloud API vars (see `.env.example` and `docs/WHATSAPP_TEMPLATES.md`; leave empty to log WhatsApp sends in the API console)
    - `DISCORD_SUPPORT_WEBHOOK_URL` (optional; fan Help messages post here, otherwise logged in the API console)
 
 3. Apply database migrations with the Supabase CLI (preferred — do not paste SQL by hand):
@@ -88,10 +97,10 @@ You only need to run this when there are new migration files — not for every a
 
 | Role | Capabilities |
 |------|-------------|
-| Fan | Browse artists, book gigs, pay token/balance, mark complete |
-| Artist | Onboard portfolio, accept/reject bookings |
+| Fan | Browse artists, request gigs (WhatsApp verified), pay 10% Alivestage fee after confirm, mark complete |
+| Artist | Onboard portfolio + WhatsApp, confirm/decline via WhatsApp or dashboard |
 | Admin | Read-only system audit |
-| Superadmin | Refunds, payouts, commission settings |
+| Superadmin | Refunds, payouts (legacy Route), commission settings |
 
 ## Project Structure
 

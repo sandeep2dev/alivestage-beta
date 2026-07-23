@@ -7,6 +7,7 @@ const authRouter = require('./routes/auth');
 const bookingsRouter = require('./routes/bookings');
 const adminRouter = require('./routes/admin');
 const artistsRouter = require('./routes/artists');
+const { verifyChallenge, handleWebhook } = require('./routes/whatsapp');
 const { registerCronJobs } = require('./services/cron');
 
 const app = express();
@@ -14,6 +15,14 @@ const PORT = process.env.PORT || 5001;
 const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 app.use(cors({ origin: allowedOrigin, credentials: true }));
+
+app.get('/api/whatsapp/webhook', verifyChallenge);
+app.post(
+  '/api/whatsapp/webhook',
+  express.raw({ type: 'application/json' }),
+  handleWebhook
+);
+
 app.use(express.json({ limit: '8mb' }));
 
 app.get('/health', (_req, res) => {

@@ -10,11 +10,16 @@ import CitySelect from '@/components/CitySelect/CitySelect';
 import FileUpload from '@/components/FileUpload/FileUpload';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
+import WhatsAppVerify from '@/components/WhatsAppVerify/WhatsAppVerify';
 import styles from './onboarding.module.css';
 
 const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Folk', 'Bollywood'];
 const MAX_LINKS = 5;
 const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
+
+function hasVerifiedWhatsApp(p) {
+  return Boolean(p?.phone && p?.whatsapp_verified_at);
+}
 
 export default function OnboardingWizard() {
   const router = useRouter();
@@ -25,6 +30,7 @@ export default function OnboardingWizard() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
+  const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({
     bio: '',
     cityId: '',
@@ -48,6 +54,7 @@ export default function OnboardingWizard() {
           router.replace('/');
           return;
         }
+        setProfile(data.profile);
         setReady(true);
       } catch {
         router.replace('/auth');
@@ -199,6 +206,13 @@ export default function OnboardingWizard() {
     setError('');
     setFieldErrors({});
 
+    if (!hasVerifiedWhatsApp(profile)) {
+      setError('Verify your WhatsApp number before finishing onboarding.');
+      setStep(1);
+      setLoading(false);
+      return;
+    }
+
     const minCheck = parseMoney(form.minBookingAmount, { label: 'Minimum booking', min: 1, integer: true });
     const rateCheck = parseMoney(form.hourlyRate, { label: 'Hourly rate', min: 1, integer: true });
     const errors = {};
@@ -290,8 +304,30 @@ export default function OnboardingWizard() {
                 />
               )}
             </FormField>
+
+            <div style={{ marginTop: '1.25rem', marginBottom: '1rem' }}>
+              <h2 className={styles.sectionTitle || undefined} style={{ fontSize: '1.05rem', marginBottom: '0.5rem' }}>
+                WhatsApp number
+              </h2>
+              {hasVerifiedWhatsApp(profile) ? (
+                <p className={styles.subtitle}>
+                  Verified: <strong>{profile.phone}</strong>
+                </p>
+              ) : (
+                <WhatsAppVerify
+                  initialPhone={profile?.phone || ''}
+                  onVerified={(p) => setProfile(p)}
+                  submitLabel="Verify WhatsApp"
+                />
+              )}
+            </div>
+
             <div className="formActions">
-              <button type="submit" className="btn btnPrimary" disabled={loading}>
+              <button
+                type="submit"
+                className="btn btnPrimary"
+                disabled={loading || !hasVerifiedWhatsApp(profile)}
+              >
                 {loading ? 'Saving...' : 'Next'}
               </button>
             </div>

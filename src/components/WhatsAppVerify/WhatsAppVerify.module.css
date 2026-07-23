@@ -1,0 +1,33 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sentTo {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted, #a0a3ad);
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  color: var(--accent, #7c9cff);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}

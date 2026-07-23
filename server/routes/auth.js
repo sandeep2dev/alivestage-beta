@@ -3,6 +3,8 @@ const { createOtp, verifyOtp, normalizeEmail } = require('../services/otp');
 const { signToken } = require('../services/jwt');
 const { sendMail } = require('../services/email');
 const { requireAuth } = require('../middleware/auth');
+const { normalizeIndianPhone, toWhatsAppRecipient } = require('../lib/phone');
+const { sendOtpMessage } = require('../services/whatsapp');
 
 const router = require('express').Router();
 
@@ -15,6 +17,10 @@ function otpEmailHtml(code) {
   `;
 }
 
+function phoneOtpKey(local10) {
+  return `wa:${local10}`;
+}
+
 router.post('/send-otp', async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -22,17 +28,82 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ message: 'Valid email is required' });
     }
 
-    const code = createOtp(email);
+    const created = createOtp(email);
+    if (!created.ok) {
+      return res.status(429).json({ message: created.message, retryAfterSec: created.retryAfterSec });
+    }
     await sendMail({
       to: email,
       subject: 'Your Alivestage sign-in code',
-      html: otpEmailHtml(code),
+      html: otpEmailHtml(created.code),
     });
 
     res.json({ message: 'OTP sent' });
   } catch (err) {
     console.error('[auth/send-otp]', err);
     res.status(500).json({ message: err.message || 'Failed to send OTP' });
+  }
+});
+
+/** Send WhatsApp OTP to verify phone ownership (fan or artist). */
+router.post('/whatsapp/send-otp', requireAuth, async (req, res) => {
+  try {
+    const parsed = normalizeIndianPhone(req.body?.phone);
+    if (!parsed.ok) {
+      return res.status(400).json({ message: parsed.message });
+    }
+
+    const created = createOtp(phoneOtpKey(parsed.value), { enforceCooldown: true });
+    if (!created.ok) {
+      return res.status(429).json({ message: created.message, retryAfterSec: created.retryAfterSec });
+    }
+
+    await sendOtpMessage({
+      to: toWhatsAppRecipient(parsed.value),
+      code: created.code,
+    });
+
+    res.json({ message: 'WhatsApp code sent', phone: parsed.value });
+  } catch (err) {
+    console.error('[auth/whatsapp/send-otp]', err);
+    res.status(500).json({ message: err.message || 'Failed to send WhatsApp code' });
+  }
+});
+
+/** Confirm WhatsApp OTP and persist verified phone on profile. */
+router.post('/whatsapp/verify-otp', requireAuth, async (req, res) => {
+  try {
+    const parsed = normalizeIndianPhone(req.body?.phone);
+    const code = req.body?.otp || req.body?.code;
+    if (!parsed.ok) {
+      return res.status(400).json({ message: parsed.message });
+    }
+    if (!code) {
+      return res.status(400).json({ message: 'OTP is required' });
+    }
+
+    const result = verifyOtp(phoneOtpKey(parsed.value), code);
+    if (!result.ok) {
+      return res.status(400).json({ message: result.message });
+    }
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update({
+        phone: parsed.value,
+        whatsapp_verified_at: new Date().toISOString(),
+      })
+      .eq('id', req.profile.id)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    const accessToken = signToken(profile);
+    res.json({ profile, accessToken, verified: true });
+  } catch (err) {
+    console.error('[auth/whatsapp/verify-otp]', err);
+    res.status(500).json({ message: err.message || 'Failed to verify WhatsApp code' });
   }
 });
 
@@ -120,23 +191,22 @@ router.patch('/profile', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'Name must be at most 80 characters' });
     }
 
-    let phone = null;
+    const updates = { name };
     if (phoneRaw) {
-      const digits = phoneRaw.replace(/\D/g, '');
-      const local = digits.length === 12 && digits.startsWith('91')
-        ? digits.slice(2)
-        : digits.length === 11 && digits.startsWith('0')
-          ? digits.slice(1)
-          : digits;
-      if (!/^[6-9]\d{9}$/.test(local)) {
-        return res.status(400).json({ message: 'Enter a valid 10-digit Indian mobile number' });
+      const parsed = normalizeIndianPhone(phoneRaw);
+      if (!parsed.ok) {
+        return res.status(400).json({ message: parsed.message });
       }
-      phone = local;
+      updates.phone = parsed.value;
+      // Changing number clears verification until WhatsApp OTP succeeds again
+      if (parsed.value !== req.profile.phone) {
+        updates.whatsapp_verified_at = null;
+      }
     }
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .update({ name, phone })
+      .update(updates)
       .eq('id', req.profile.id)
       .select('*')
       .single();
@@ -279,6 +349,13 @@ router.post('/onboarding/step3', requireAuth, async (req, res) => {
   try {
     if (req.profile.role !== 'artist') {
       return res.status(403).json({ message: 'Artist only' });
+    }
+
+    if (!req.profile.phone || !req.profile.whatsapp_verified_at) {
+      return res.status(400).json({
+        message: 'Verify your WhatsApp number before completing onboarding',
+        code: 'WHATSAPP_REQUIRED',
+      });
     }
 
     const minBookingAmount = Number(req.body?.minBookingAmount) || 0;

@@ -107,11 +107,13 @@ export function isRazorpayAccountId(value) {
   return { ok: true, value: trimmed };
 }
 
-/** Indian mobile: optional empty, or 10 digits with optional +91 / 91 prefix */
+/** Indian mobile with WhatsApp: optional empty, or 10 digits with optional +91 / 91 prefix */
 export function isPhone(value, { required = false } = {}) {
   const trimmed = String(value ?? '').trim();
   if (!trimmed) {
-    if (required) return { ok: false, value: '', message: 'Contact number is required' };
+    if (required) {
+      return { ok: false, value: '', message: 'WhatsApp number is required' };
+    }
     return { ok: true, value: '' };
   }
   const digits = trimmed.replace(/\D/g, '');

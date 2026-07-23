@@ -56,10 +56,23 @@ export default function MyBookingsPage() {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     if (params.get('booked') === '1') {
-      setMessage('Booking submitted successfully.');
+      setMessage('Request sent. We will notify you when the artist responds.');
       router.replace('/my-bookings', { scroll: false });
     }
   }, [router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || loading || !bookings.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const payId = params.get('pay');
+    if (!payId) return;
+    router.replace('/my-bookings', { scroll: false });
+    const b = bookings.find((x) => x.id === payId);
+    if (b?.status === 'awaiting_token') {
+      handlePayToken(b);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot deep link from WhatsApp
+  }, [loading, bookings]);
 
   async function withToken(action) {
     const token = getAccessToken();
@@ -90,18 +103,18 @@ export default function MyBookingsPage() {
     }
   }
 
-  async function handlePayBalance(booking) {
+  async function handlePayToken(booking) {
     setActionLoading(booking.id);
     setError('');
     setMessage('');
     try {
       const result = await withToken((token) =>
-        apiFetch(`/api/bookings/${booking.id}/pay-balance`, { method: 'POST', token })
+        apiFetch(`/api/bookings/${booking.id}/pay-token`, { method: 'POST', token })
       );
 
       if (result.mock) {
         await withToken((token) =>
-          apiFetch('/api/bookings/verify-balance', {
+          apiFetch('/api/bookings/verify-token', {
             method: 'POST',
             token,
             body: {
@@ -112,7 +125,7 @@ export default function MyBookingsPage() {
             },
           })
         );
-        setMessage('Balance payment recorded.');
+        setMessage('Alivestage fee paid. Booking locked — pay the artist their fee directly.');
         await loadData();
         return;
       }
@@ -125,7 +138,7 @@ export default function MyBookingsPage() {
         email: profile.email,
         onSuccess: async (response) => {
           await withToken((token) =>
-            apiFetch('/api/bookings/verify-balance', {
+            apiFetch('/api/bookings/verify-token', {
               method: 'POST',
               token,
               body: {
@@ -136,7 +149,7 @@ export default function MyBookingsPage() {
               },
             })
           );
-          setMessage('Balance payment recorded.');
+          setMessage('Alivestage fee paid. Booking locked — pay the artist their fee directly.');
           await loadData();
         },
       });
@@ -169,9 +182,6 @@ export default function MyBookingsPage() {
       ) : (
         <div className={styles.list}>
           {bookings.map((b) => {
-            const hasBalancePaid = (b.payments || []).some(
-              (p) => p.payment_type === 'balance' && p.status === 'fully_paid'
-            );
             const busy = busyId === b.id;
 
             return (
@@ -191,22 +201,24 @@ export default function MyBookingsPage() {
                   {b.venue_location ? ` — ${b.venue_location}` : ''}
                 </p>
                 <p className={styles.meta}>
-                  Total: ₹{Number(b.total_amount).toLocaleString()} · Token: ₹{Number(b.token_amount).toLocaleString()} · Balance: ₹{Number(b.remaining_amount).toLocaleString()}
+                  Artist fee: ₹{Number(b.total_amount).toLocaleString()} (off-platform)
+                  {' · '}
+                  Alivestage fee: ₹{Number(b.token_amount).toLocaleString()}
                 </p>
 
                 <div className={styles.actions}>
-                  {b.status === 'confirmed' && !hasBalancePaid && (
+                  {b.status === 'awaiting_token' && (
                     <button
                       type="button"
                       className="btn btnPrimary"
                       disabled={busy}
                       aria-busy={busy || undefined}
-                      onClick={() => handlePayBalance(b)}
+                      onClick={() => handlePayToken(b)}
                     >
-                      {busy ? 'Processing...' : `Pay Balance (₹${Number(b.remaining_amount).toLocaleString()})`}
+                      {busy ? 'Processing...' : `Pay Alivestage fee (₹${Number(b.token_amount).toLocaleString()})`}
                     </button>
                   )}
-                  {b.status === 'confirmed' && hasBalancePaid && (
+                  {b.status === 'confirmed' && (
                     <button
                       type="button"
                       className="btn btnPrimary"

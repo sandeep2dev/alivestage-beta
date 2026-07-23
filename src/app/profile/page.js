@@ -4,21 +4,25 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken, setAccessToken } from '@/lib/auth';
-import { isPhone, lengthBetween } from '@/lib/validators';
+import { lengthBetween } from '@/lib/validators';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
 import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
+import WhatsAppVerify from '@/components/WhatsAppVerify/WhatsAppVerify';
 import styles from './profile.module.css';
+
+function hasVerifiedWhatsApp(p) {
+  return Boolean(p?.phone && p?.whatsapp_verified_at);
+}
 
 export default function FanProfilePage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState(null);
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,7 +40,6 @@ export default function FanProfilePage() {
         }
         setProfile(data.profile);
         setName(data.profile.name || '');
-        setPhone(data.profile.phone || '');
         setReady(true);
       } catch {
         router.replace('/auth');
@@ -52,10 +55,8 @@ export default function FanProfilePage() {
     setFieldErrors({});
 
     const nameCheck = lengthBetween(name, { min: 2, max: 80, label: 'Name' });
-    const phoneCheck = isPhone(phone);
     const errors = {};
     if (!nameCheck.ok) errors.name = nameCheck.message;
-    if (!phoneCheck.ok) errors.phone = phoneCheck.message;
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
       return;
@@ -69,13 +70,12 @@ export default function FanProfilePage() {
         token,
         body: {
           name: nameCheck.value,
-          phone: phoneCheck.value,
+          phone: profile?.phone || '',
         },
       });
       if (data.accessToken) setAccessToken(data.accessToken);
       setProfile(data.profile);
       setName(data.profile.name || '');
-      setPhone(data.profile.phone || '');
       setMessage('Profile updated.');
     } catch (err) {
       setError(err.message);
@@ -117,27 +117,40 @@ export default function FanProfilePage() {
             />
           </FormField>
 
-          <FormField
-            id="phone"
-            label="Contact number"
-            error={fieldErrors.phone}
-            hint="Optional. 10-digit Indian mobile number"
-          >
-            <input
-              className="input"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel"
-              placeholder="9876543210"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </FormField>
-
           <button type="submit" className="btn btnPrimary" disabled={loading}>
-            {loading ? 'Saving...' : 'Save changes'}
+            {loading ? 'Saving...' : 'Save name'}
           </button>
         </form>
+
+        <hr style={{ margin: '1.75rem 0', border: 0, borderTop: '1px solid var(--border, #2a2c35)' }} />
+
+        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>WhatsApp number</h2>
+        <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
+          Must have WhatsApp. Required to book artists.
+        </p>
+        {hasVerifiedWhatsApp(profile) ? (
+          <p>
+            Verified: <strong>{profile.phone}</strong>
+            {' '}
+            <button
+              type="button"
+              className="btn btnSecondary"
+              style={{ marginLeft: '0.75rem' }}
+              onClick={() => setProfile({ ...profile, whatsapp_verified_at: null })}
+            >
+              Change number
+            </button>
+          </p>
+        ) : (
+          <WhatsAppVerify
+            initialPhone={profile?.phone || ''}
+            onVerified={(p) => {
+              setProfile(p);
+              setMessage('WhatsApp number verified.');
+            }}
+            submitLabel="Verify WhatsApp"
+          />
+        )}
       </div>
     </div>
   );

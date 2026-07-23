@@ -10,11 +10,16 @@ import CitySelect from '@/components/CitySelect/CitySelect';
 import FileUpload from '@/components/FileUpload/FileUpload';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
+import WhatsAppVerify from '@/components/WhatsAppVerify/WhatsAppVerify';
 import styles from '../dashboard.module.css';
 
 const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Folk', 'Bollywood'];
 const MAX_LINKS = 5;
 const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
+
+function hasVerifiedWhatsApp(p) {
+  return Boolean(p?.phone && p?.whatsapp_verified_at);
+}
 
 export default function ArtistSettingsPage() {
   const router = useRouter();
@@ -25,6 +30,7 @@ export default function ArtistSettingsPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
+  const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({
     bio: '',
     cityId: '',
@@ -48,6 +54,7 @@ export default function ArtistSettingsPage() {
         const links = Array.isArray(d.youtube_links) && d.youtube_links.length
           ? d.youtube_links
           : [''];
+        setProfile(data.profile);
         setForm({
           bio: d.bio || '',
           cityId: d.city_id || '',
@@ -202,6 +209,34 @@ export default function ArtistSettingsPage() {
 
       <FormAlert type="error">{error}</FormAlert>
       <FormAlert type="success">{message}</FormAlert>
+
+      <div className={`card ${styles.wideForm}`} style={{ marginBottom: '1.25rem' }}>
+        <h2 className="formSectionTitle">WhatsApp number</h2>
+        <p className="formSectionHint">Must have WhatsApp. Required to receive booking requests.</p>
+        {hasVerifiedWhatsApp(profile) ? (
+          <p>
+            Verified: <strong>{profile.phone}</strong>
+            {' '}
+            <button
+              type="button"
+              className="btn btnSecondary"
+              style={{ marginLeft: '0.75rem' }}
+              onClick={() => setProfile({ ...profile, whatsapp_verified_at: null })}
+            >
+              Change number
+            </button>
+          </p>
+        ) : (
+          <WhatsAppVerify
+            initialPhone={profile?.phone || ''}
+            onVerified={(p) => {
+              setProfile(p);
+              setMessage('WhatsApp number verified.');
+            }}
+            submitLabel="Verify WhatsApp"
+          />
+        )}
+      </div>
 
       <form className={`card ${styles.wideForm}`} onSubmit={handleSubmit} noValidate>
         <section className="formSection">
