@@ -1,13 +1,2 @@
-#profile page for fan
-#dashboard for artists and it will have a fixed sidebar on left
-    - Overview page -> showing upcoming gigs,
-    - My booking page
-    - Earnings page
-    - Settings page (same fields as taken on onboarding time)
-
-    in bottom of the fixed sidebar artist has 
-
-    Add new booking btn - for when they want to add a booking by themselves
-
-    Help btn - support dialog basically - for fan also rename it help
-    signout btn
+# for now remove whatsapp otp verification just input the number it is fine
+comment the code so that we can use it later, now we need to add a line below the whatsapp number field->please make sure this is whatsapp number as we will use it for real time communication
