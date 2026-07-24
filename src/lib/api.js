@@ -38,7 +38,7 @@ export async function openRazorpayCheckout({ key, orderId, amount, name, email, 
       amount,
       currency: 'INR',
       name: 'Alivestage',
-      description: 'Booking payment',
+      description: 'AliVeStage fee',
       order_id: orderId,
       prefill: { name, email },
       handler: (response) => {

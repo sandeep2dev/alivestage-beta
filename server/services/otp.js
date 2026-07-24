@@ -1,9 +1,13 @@
 const crypto = require('crypto');
+const {
+  DISCORD_OTP_TTL_MS,
+  DISCORD_OTP_COOLDOWN_MS,
+} = require('../config/community');
 
-const OTP_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_TTL_MS = 10 * 60 * 1000;
 const OTP_LENGTH = 6;
 const MAX_ATTEMPTS = 5;
-const RESEND_COOLDOWN_MS = 45 * 1000;
+const DEFAULT_COOLDOWN_MS = 45 * 1000;
 
 /** @type {Map<string, { hash: string, expiresAt: number, attempts: number, sentAt: number }>} */
 const store = new Map();
@@ -26,10 +30,15 @@ function hashCode(key, code) {
 }
 
 /**
- * Create or replace an OTP for a key (email or phone).
- * @returns {{ ok: true, code: string } | { ok: false, message: string, retryAfterSec?: number }}
+ * Create or replace an OTP for a key.
+ * @param {string} key
+ * @param {{ enforceCooldown?: boolean, ttlMs?: number, cooldownMs?: number }} [opts]
  */
-function createOtp(key, { enforceCooldown = false } = {}) {
+function createOtp(key, {
+  enforceCooldown = false,
+  ttlMs = DEFAULT_TTL_MS,
+  cooldownMs = DEFAULT_COOLDOWN_MS,
+} = {}) {
   const storeKey = normalizeKey(key);
   if (!storeKey) {
     return { ok: false, message: 'Invalid OTP key' };
@@ -38,8 +47,8 @@ function createOtp(key, { enforceCooldown = false } = {}) {
   const existing = store.get(storeKey);
   if (enforceCooldown && existing?.sentAt) {
     const elapsed = Date.now() - existing.sentAt;
-    if (elapsed < RESEND_COOLDOWN_MS) {
-      const retryAfterSec = Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000);
+    if (elapsed < cooldownMs) {
+      const retryAfterSec = Math.ceil((cooldownMs - elapsed) / 1000);
       return {
         ok: false,
         message: `Please wait ${retryAfterSec}s before requesting a new code`,
@@ -51,11 +60,19 @@ function createOtp(key, { enforceCooldown = false } = {}) {
   const code = generateCode();
   store.set(storeKey, {
     hash: hashCode(storeKey, code),
-    expiresAt: Date.now() + OTP_TTL_MS,
+    expiresAt: Date.now() + ttlMs,
     attempts: 0,
     sentAt: Date.now(),
   });
   return { ok: true, code };
+}
+
+function createDiscordOtp(key) {
+  return createOtp(key, {
+    enforceCooldown: true,
+    ttlMs: DISCORD_OTP_TTL_MS,
+    cooldownMs: DISCORD_OTP_COOLDOWN_MS,
+  });
 }
 
 function verifyOtp(key, code) {
@@ -80,17 +97,24 @@ function verifyOtp(key, code) {
   return { ok: true };
 }
 
-/** @deprecated use normalizeKey — kept for email auth callers */
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+function discordOtpKey(profileId) {
+  return `discord:${profileId}`;
+}
+
 module.exports = {
   createOtp,
+  createDiscordOtp,
   verifyOtp,
   normalizeEmail,
   normalizeKey,
-  OTP_TTL_MS,
+  discordOtpKey,
+  OTP_TTL_MS: DEFAULT_TTL_MS,
   MAX_ATTEMPTS,
-  RESEND_COOLDOWN_MS,
+  RESEND_COOLDOWN_MS: DEFAULT_COOLDOWN_MS,
+  DISCORD_OTP_TTL_MS,
+  DISCORD_OTP_COOLDOWN_MS,
 };

@@ -18,8 +18,6 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
-  const isArtistDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
-
   useEffect(() => {
     async function load() {
       const token = getAccessToken();
@@ -49,14 +47,7 @@ export default function Navbar() {
     router.refresh();
   }
 
-  const isFan = profile?.role === 'fan';
-  const isArtist = profile?.role === 'artist';
-  const isAdmin = profile && ['admin', 'superadmin'].includes(profile.role);
-
-  // Artist dashboard owns its chrome (sidebar); no top navbar there.
-  if (isArtist && isArtistDashboard) {
-    return null;
-  }
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <>
@@ -65,21 +56,25 @@ export default function Navbar() {
           <Logo variant="full" href="/" size="md" />
 
           <div className={styles.right}>
-            {!profile && (
-              <Link href="/auth" className={`btn btnPrimary ${styles.authBtn}`}>Sign In</Link>
-            )}
-
-            {isAdmin && (
-              <Link href="/admin" className={styles.link}>Admin</Link>
-            )}
-
-            {isArtist && profile && (
-              <Link href="/dashboard" className={styles.dashboardLink}>
-                Dashboard
+            {profile?.verified_at && (
+              <Link href="/events/new" className={styles.dashboardLink}>
+                Host a jam
               </Link>
             )}
 
-            {isFan && profile && (
+            {!profile && (
+              <Link href="/auth" className={`btn btnPrimary ${styles.authBtn}`}>
+                Sign In
+              </Link>
+            )}
+
+            {isAdmin && (
+              <Link href="/admin" className={styles.link}>
+                Admin
+              </Link>
+            )}
+
+            {profile && (
               <button
                 type="button"
                 className={styles.profileButton}
@@ -91,17 +86,11 @@ export default function Navbar() {
                 <ProfileAvatar profile={profile} />
               </button>
             )}
-
-            {isAdmin && !isFan && !isArtist && profile && (
-              <button type="button" className="btn btnSecondary" onClick={handleSignOut}>
-                Sign Out
-              </button>
-            )}
           </div>
         </div>
       </header>
 
-      {isFan && (
+      {profile && (
         <>
           <FanDrawer
             open={drawerOpen}

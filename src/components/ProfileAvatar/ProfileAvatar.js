@@ -13,7 +13,7 @@ export default function ProfileAvatar({ profile, size = 'md', className = '' }) 
   const sizeClass = size === 'lg' ? styles.lg : size === 'sm' ? styles.sm : styles.md;
   const label = profile?.name || profile?.email || 'Account';
 
-  if (profile?.role === 'artist' && profile?.avatar_url) {
+  if (profile?.avatar_url) {
     return (
       <img
         src={profile.avatar_url}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken, setAccessToken } from '@/lib/auth';
@@ -8,18 +9,15 @@ import { lengthBetween } from '@/lib/validators';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
 import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
-import WhatsAppVerify from '@/components/WhatsAppVerify/WhatsAppVerify';
 import styles from './profile.module.css';
 
-function hasVerifiedWhatsApp(p) {
-  return Boolean(p?.phone && p?.whatsapp_verified_at);
-}
-
-export default function FanProfilePage() {
+export default function ProfilePage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState(null);
   const [name, setName] = useState('');
+  const [city, setCity] = useState('');
+  const [pincode, setPincode] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
@@ -34,12 +32,10 @@ export default function FanProfilePage() {
       }
       try {
         const data = await apiFetch('/api/auth/me', { token });
-        if (data.profile?.role !== 'fan') {
-          router.replace('/');
-          return;
-        }
         setProfile(data.profile);
         setName(data.profile.name || '');
+        setCity(data.profile.city || '');
+        setPincode(data.profile.pincode || '');
         setReady(true);
       } catch {
         router.replace('/auth');
@@ -57,6 +53,8 @@ export default function FanProfilePage() {
     const nameCheck = lengthBetween(name, { min: 2, max: 80, label: 'Name' });
     const errors = {};
     if (!nameCheck.ok) errors.name = nameCheck.message;
+    if (city.trim().length < 2) errors.city = 'City is required';
+    if (!/^\d{6}$/.test(pincode)) errors.pincode = 'Pincode must be 6 digits';
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
       return;
@@ -70,12 +68,12 @@ export default function FanProfilePage() {
         token,
         body: {
           name: nameCheck.value,
-          phone: profile?.phone || '',
+          city: city.trim(),
+          pincode,
         },
       });
       if (data.accessToken) setAccessToken(data.accessToken);
       setProfile(data.profile);
-      setName(data.profile.name || '');
       setMessage('Profile updated.');
     } catch (err) {
       setError(err.message);
@@ -85,73 +83,65 @@ export default function FanProfilePage() {
   }
 
   if (!ready) {
-    return <div className="container"><p>Loading...</p></div>;
+    return (
+      <div className={`container ${styles.page}`}>
+        <p>Loading…</p>
+      </div>
+    );
   }
+
+  const rep = profile?.reputation_score;
+  const count = profile?.rating_count || 0;
+  const showRep = count >= 10 && rep != null;
 
   return (
     <div className={`container ${styles.page}`}>
-      <div className={`card ${styles.card}`}>
-        <div className={styles.header}>
-          <ProfileAvatar profile={profile} size="lg" />
-          <div>
-            <h1 className="pageTitle">Profile</h1>
-            <p className={styles.subtitle}>Update your account details</p>
-          </div>
-        </div>
-
-        <FormAlert type="error">{error}</FormAlert>
-        <FormAlert type="success">{message}</FormAlert>
-
-        <form onSubmit={handleSubmit} noValidate>
-          <FormField id="email" label="Email" hint="Email cannot be changed">
-            <input id="email" className="input" value={profile.email || ''} disabled readOnly />
-          </FormField>
-
-          <FormField id="name" label="Full name" required error={fieldErrors.name}>
-            <input
-              className="input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-              maxLength={80}
-            />
-          </FormField>
-
-          <button type="submit" className="btn btnPrimary" disabled={loading}>
-            {loading ? 'Saving...' : 'Save name'}
-          </button>
-        </form>
-
-        <hr style={{ margin: '1.75rem 0', border: 0, borderTop: '1px solid var(--border, #2a2c35)' }} />
-
-        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>WhatsApp number</h2>
-        <p className={styles.subtitle} style={{ marginBottom: '1rem' }}>
-          Must have WhatsApp. Required to book artists.
-        </p>
-        {hasVerifiedWhatsApp(profile) ? (
-          <p>
-            Verified: <strong>{profile.phone}</strong>
-            {' '}
-            <button
-              type="button"
-              className="btn btnSecondary"
-              style={{ marginLeft: '0.75rem' }}
-              onClick={() => setProfile({ ...profile, whatsapp_verified_at: null })}
-            >
-              Change number
-            </button>
+      <div className={styles.header}>
+        <ProfileAvatar profile={profile} size="lg" />
+        <div>
+          <h1 className="pageTitle">{profile.name || 'Profile'}</h1>
+          <p className={styles.meta}>
+            {profile.verified_at
+              ? `Discord @${profile.discord_username}`
+              : 'Discord not verified'}
           </p>
-        ) : (
-          <WhatsAppVerify
-            initialPhone={profile?.phone || ''}
-            onVerified={(p) => {
-              setProfile(p);
-              setMessage('WhatsApp number verified.');
-            }}
-            submitLabel="Verify WhatsApp"
-          />
-        )}
+          <p className={styles.meta}>
+            Reputation:{' '}
+            {showRep ? `${rep} (${count} ratings)` : 'Not enough ratings yet'}
+          </p>
+          {!profile.verified_at && (
+            <Link href="/onboarding" className="btn btnSecondary">
+              Verify Discord
+            </Link>
+          )}
+        </div>
       </div>
+
+      <FormAlert type="error">{error}</FormAlert>
+      <FormAlert type="success">{message}</FormAlert>
+
+      <form className={`card ${styles.form}`} onSubmit={handleSubmit} noValidate>
+        <FormField id="name" label="Display name" required error={fieldErrors.name}>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+        </FormField>
+        <FormField id="city" label="City" required error={fieldErrors.city}>
+          <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
+        </FormField>
+        <FormField id="pincode" label="Pincode" required error={fieldErrors.pincode}>
+          <input
+            className="input"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            inputMode="numeric"
+          />
+        </FormField>
+        <FormField id="email" label="Email" hint="Entry field only — not verified">
+          <input className="input" value={profile.email || ''} disabled />
+        </FormField>
+        <button type="submit" className="btn btnPrimary" disabled={loading}>
+          {loading ? 'Saving…' : 'Save profile'}
+        </button>
+      </form>
     </div>
   );
 }

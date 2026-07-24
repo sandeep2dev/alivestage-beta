@@ -1,0 +1,20 @@
+.page {
+  padding-block: var(--page-pad-y);
+}
+
+.header {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: center;
+}
+
+.meta {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-sm);
+}
+
+.rep {
+  margin: 0;
+  color: var(--color-secondary);
+  font-weight: 600;
+}

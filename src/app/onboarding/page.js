@@ -1,48 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiFetch } from '@/lib/api';
-import { getAccessToken } from '@/lib/auth';
-import { imageToUploadPayload } from '@/lib/image';
-import { isYoutubeUrl, lengthBetween, parseMoney } from '@/lib/validators';
-import CitySelect from '@/components/CitySelect/CitySelect';
-import FileUpload from '@/components/FileUpload/FileUpload';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
-import WhatsAppVerify from '@/components/WhatsAppVerify/WhatsAppVerify';
+import { apiFetch } from '@/lib/api';
+import { getAccessToken, setAccessToken, clearAccessToken } from '@/lib/auth';
 import styles from './onboarding.module.css';
 
-const GENRES = ['Rock', 'Pop', 'Jazz', 'Classical', 'Hip Hop', 'Electronic', 'Folk', 'Bollywood'];
-const MAX_LINKS = 5;
-const MAX_AVATAR_BYTES = 8 * 1024 * 1024;
-
-function hasVerifiedWhatsApp(p) {
-  return Boolean(p?.phone && p?.whatsapp_verified_at);
-}
-
-export default function OnboardingWizard() {
+export default function OnboardingPage() {
   const router = useRouter();
-  const [ready, setReady] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState('profile');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
-  const [avatarFile, setAvatarFile] = useState(null);
-  const [avatarPreview, setAvatarPreview] = useState('');
-  const [profile, setProfile] = useState(null);
+  const [message, setMessage] = useState('');
+  const [inviteUrl, setInviteUrl] = useState('');
   const [form, setForm] = useState({
-    bio: '',
-    cityId: '',
-    avatarUrl: '',
-    genres: [],
-    youtubeLinks: [''],
-    minBookingAmount: '',
-    hourlyRate: '',
+    name: '',
+    city: '',
+    pincode: '',
+    discordUsername: '',
   });
+  const [otp, setOtp] = useState('');
+  const [resendIn, setResendIn] = useState(0);
 
   useEffect(() => {
-    async function check() {
+    async function load() {
       const token = getAccessToken();
       if (!token) {
         router.replace('/auth');
@@ -50,108 +33,60 @@ export default function OnboardingWizard() {
       }
       try {
         const data = await apiFetch('/api/auth/me', { token });
-        if (data.profile?.role !== 'artist') {
+        const p = data.profile;
+        setInviteUrl(data.discordInviteUrl || '');
+        setForm({
+          name: p.name || '',
+          city: p.city || '',
+          pincode: p.pincode || '',
+          discordUsername: p.discord_username || '',
+        });
+        if (p.verified_at && p.onboarding_complete) {
           router.replace('/');
           return;
         }
-        setProfile(data.profile);
-        setReady(true);
+        if (p.discord_username && p.city && p.pincode && !p.verified_at) {
+          setStep('discord');
+        }
       } catch {
+        clearAccessToken();
         router.replace('/auth');
       }
     }
-    check();
+    load();
   }, [router]);
 
   useEffect(() => {
-    if (!avatarFile) {
-      setAvatarPreview('');
-      return undefined;
-    }
-    const url = URL.createObjectURL(avatarFile);
-    setAvatarPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [avatarFile]);
+    if (resendIn <= 0) return undefined;
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
 
-  function toggleGenre(genre) {
-    setForm((prev) => ({
-      ...prev,
-      genres: prev.genres.includes(genre)
-        ? prev.genres.filter((g) => g !== genre)
-        : [...prev.genres, genre],
-    }));
-    setFieldErrors((prev) => ({ ...prev, genres: '' }));
-  }
-
-  function updateYoutubeLink(index, value) {
-    const links = [...form.youtubeLinks];
-    links[index] = value;
-    setForm({ ...form, youtubeLinks: links });
-  }
-
-  function addYoutubeLink() {
-    if (form.youtubeLinks.length >= MAX_LINKS) return;
-    setForm({ ...form, youtubeLinks: [...form.youtubeLinks, ''] });
-  }
-
-  function removeYoutubeLink(index) {
-    const links = form.youtubeLinks.filter((_, i) => i !== index);
-    setForm({ ...form, youtubeLinks: links.length ? links : [''] });
-  }
-
-  function onAvatarChange(e) {
-    const file = e.target.files?.[0];
-    setFieldErrors((prev) => ({ ...prev, avatar: '' }));
-    if (!file) {
-      setAvatarFile(null);
-      return;
-    }
-    if (!file.type.startsWith('image/')) {
-      setFieldErrors((prev) => ({ ...prev, avatar: 'Choose an image file' }));
-      setAvatarFile(null);
-      e.target.value = '';
-      return;
-    }
-    if (file.size > MAX_AVATAR_BYTES) {
-      setFieldErrors((prev) => ({ ...prev, avatar: 'Image must be under 8 MB' }));
-      setAvatarFile(null);
-      e.target.value = '';
-      return;
-    }
-    setAvatarFile(file);
-  }
-
-  async function saveStep1(e) {
+  async function saveProfile(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setFieldErrors({});
-
-    const bioCheck = lengthBetween(form.bio, { min: 20, max: 1000, label: 'Bio' });
-    const errors = {};
-    if (!bioCheck.ok) errors.bio = bioCheck.message;
-    if (!form.cityId) errors.cityId = 'Select your base city';
-    if (Object.keys(errors).length) {
-      setFieldErrors(errors);
-      setLoading(false);
-      return;
-    }
-
+    setMessage('');
     try {
       const token = getAccessToken();
-      const body = { bio: bioCheck.value, cityId: form.cityId };
-      if (avatarFile) {
-        const payload = await imageToUploadPayload(avatarFile);
-        body.avatarBase64 = payload.base64;
-        body.avatarFileName = payload.fileName;
+      const data = await apiFetch('/api/auth/onboarding', {
+        method: 'POST',
+        token,
+        body: {
+          name: form.name,
+          city: form.city,
+          pincode: form.pincode,
+          discord_username: form.discordUsername,
+        },
+      });
+      if (data.accessToken) setAccessToken(data.accessToken);
+      setInviteUrl(data.discordInviteUrl || inviteUrl);
+      if (data.next === 'done') {
+        router.push('/');
+        return;
       }
-      const data = await apiFetch('/api/auth/onboarding/step1', {
-        method: 'POST',
-        token,
-        body,
-      });
-      setForm((prev) => ({ ...prev, avatarUrl: data.avatarUrl || prev.avatarUrl, bio: bioCheck.value }));
-      setStep(2);
+      setStep('discord');
+      setMessage('Join the Discord server, then request a DM code.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -159,40 +94,23 @@ export default function OnboardingWizard() {
     }
   }
 
-  async function saveStep2(e) {
-    e.preventDefault();
+  async function sendDiscordOtp() {
     setLoading(true);
     setError('');
-    setFieldErrors({});
-
-    if (form.genres.length < 1) {
-      setFieldErrors({ genres: 'Select at least one genre' });
-      setLoading(false);
-      return;
-    }
-
-    const linkErrors = {};
-    form.youtubeLinks.forEach((link, i) => {
-      const check = isYoutubeUrl(link);
-      if (!check.ok) linkErrors[`yt-${i}`] = check.message;
-    });
-    if (Object.keys(linkErrors).length) {
-      setFieldErrors(linkErrors);
-      setLoading(false);
-      return;
-    }
-
+    setMessage('');
     try {
       const token = getAccessToken();
-      await apiFetch('/api/auth/onboarding/step2', {
+      const data = await apiFetch('/api/auth/discord/send-otp', {
         method: 'POST',
         token,
-        body: {
-          genres: form.genres,
-          youtubeLinks: form.youtubeLinks,
-        },
+        body: { discord_username: form.discordUsername },
       });
-      setStep(3);
+      setMessage(
+        data.mock
+          ? 'Dev mode: check the API console for the Discord OTP.'
+          : 'Check your Discord DMs for a 6-digit code.'
+      );
+      setResendIn(60);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -200,230 +118,141 @@ export default function OnboardingWizard() {
     }
   }
 
-  async function saveStep3(e) {
+  async function verifyDiscord(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setFieldErrors({});
-
-    if (!hasVerifiedWhatsApp(profile)) {
-      setError('Verify your WhatsApp number before finishing onboarding.');
-      setStep(1);
-      setLoading(false);
-      return;
-    }
-
-    const minCheck = parseMoney(form.minBookingAmount, { label: 'Minimum booking', min: 1, integer: true });
-    const rateCheck = parseMoney(form.hourlyRate, { label: 'Hourly rate', min: 1, integer: true });
-    const errors = {};
-    if (!minCheck.ok) errors.minBookingAmount = minCheck.message;
-    if (!rateCheck.ok) errors.hourlyRate = rateCheck.message;
-    if (Object.keys(errors).length) {
-      setFieldErrors(errors);
-      setLoading(false);
-      return;
-    }
-
     try {
       const token = getAccessToken();
-      await apiFetch('/api/auth/onboarding/step3', {
+      const data = await apiFetch('/api/auth/discord/verify-otp', {
         method: 'POST',
         token,
-        body: {
-          minBookingAmount: minCheck.value,
-          hourlyRate: rateCheck.value,
-        },
+        body: { otp },
       });
-      router.push('/dashboard');
+      if (data.accessToken) setAccessToken(data.accessToken);
+      router.push('/');
       router.refresh();
     } catch (err) {
       setError(err.message);
+    } finally {
       setLoading(false);
     }
-  }
-
-  if (!ready) {
-    return <div className="container"><p>Loading...</p></div>;
   }
 
   return (
     <div className={`container ${styles.page}`}>
       <div className={`card ${styles.card}`}>
-        <div className={styles.steps} role="list" aria-label="Onboarding steps">
-          {[1, 2, 3].map((s) => (
-            <span
-              key={s}
-              role="listitem"
-              aria-current={step === s ? 'step' : undefined}
-              className={`${styles.stepDot} ${step >= s ? styles.stepActive : ''}`}
-            >
-              Step {s}
-            </span>
-          ))}
-        </div>
+        <h1 className="pageTitle">Join the community</h1>
+        <p className={styles.subtitle}>
+          Email is just an entry point. Discord verification is your identity on AliVeStage.
+        </p>
 
         <FormAlert type="error">{error}</FormAlert>
+        <FormAlert type="success">{message}</FormAlert>
 
-        {step === 1 && (
-          <form onSubmit={saveStep1} noValidate>
-            <h1 className="pageTitle">Identity & Location</h1>
-            <p className={styles.subtitle}>Tell fans about yourself</p>
-            <FormField id="bio" label="Bio" required error={fieldErrors.bio} hint="20–1000 characters">
-              <textarea
-                className="textarea"
-                rows={5}
-                maxLength={1000}
-                value={form.bio}
-                onChange={(e) => setForm({ ...form, bio: e.target.value })}
+        {step === 'profile' ? (
+          <form onSubmit={saveProfile} noValidate>
+            <FormField id="name" label="Display name" required>
+              <input
+                className="input"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                required
               />
             </FormField>
-            <div className="formGrid2">
-              <FormField id="city" label="Base city" required error={fieldErrors.cityId}>
-                <CitySelect
-                  id="city"
-                  value={form.cityId}
-                  onChange={(cityId) => {
-                    setForm({ ...form, cityId });
-                    setFieldErrors((prev) => ({ ...prev, cityId: '' }));
-                  }}
-                  required
-                  placeholder="Select your base city"
+            <FormField id="city" label="City" required>
+              <input
+                className="input"
+                value={form.city}
+                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                required
+              />
+            </FormField>
+            <FormField id="pincode" label="Pincode" required hint="6-digit Indian pincode">
+              <input
+                className="input"
+                value={form.pincode}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    pincode: e.target.value.replace(/\D/g, '').slice(0, 6),
+                  }))
+                }
+                inputMode="numeric"
+                required
+              />
+            </FormField>
+            <FormField id="discord" label="Discord username" required>
+              <input
+                className="input"
+                value={form.discordUsername}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, discordUsername: e.target.value.replace(/^@/, '') }))
+                }
+                placeholder="yourname"
+                required
+              />
+            </FormField>
+            <button type="submit" className="btn btnPrimary" disabled={loading}>
+              {loading ? 'Saving…' : 'Continue'}
+            </button>
+          </form>
+        ) : (
+          <div className={styles.discordStep}>
+            <ol className={styles.steps}>
+              <li>
+                Join the AliVeStage Discord{' '}
+                {inviteUrl ? (
+                  <a href={inviteUrl} target="_blank" rel="noreferrer">
+                    server invite
+                  </a>
+                ) : (
+                  'server'
+                )}
+                .
+              </li>
+              <li>Request a DM OTP below (allow DMs from server members).</li>
+              <li>Paste the 6-digit code to verify.</li>
+            </ol>
+
+            <button
+              type="button"
+              className="btn btnSecondary"
+              onClick={sendDiscordOtp}
+              disabled={loading || resendIn > 0}
+            >
+              {resendIn > 0 ? `Resend in ${resendIn}s` : 'Send Discord OTP'}
+            </button>
+
+            <form onSubmit={verifyDiscord} noValidate>
+              <FormField id="otp" label="Discord OTP" required>
+                <input
+                  className="input"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="6-digit code"
                 />
               </FormField>
-            </div>
-            <FormField id="avatar" label="Profile photo" error={fieldErrors.avatar} hint="Optional. JPG or PNG up to 8 MB.">
-              {({ id, ...fieldProps }) => (
-                <FileUpload
-                  id={id}
-                  previewSrc={avatarPreview || form.avatarUrl}
-                  previewAlt="Profile preview"
-                  fileName={avatarFile?.name || ''}
-                  onChange={onAvatarChange}
-                  aria-invalid={fieldProps['aria-invalid']}
-                  aria-describedby={fieldProps['aria-describedby']}
-                />
-              )}
-            </FormField>
-
-            <div style={{ marginTop: '1.25rem', marginBottom: '1rem' }}>
-              <h2 className={styles.sectionTitle || undefined} style={{ fontSize: '1.05rem', marginBottom: '0.5rem' }}>
-                WhatsApp number
-              </h2>
-              {hasVerifiedWhatsApp(profile) ? (
-                <p className={styles.subtitle}>
-                  Verified: <strong>{profile.phone}</strong>
-                </p>
-              ) : (
-                <WhatsAppVerify
-                  initialPhone={profile?.phone || ''}
-                  onVerified={(p) => setProfile(p)}
-                  submitLabel="Verify WhatsApp"
-                />
-              )}
-            </div>
-
-            <div className="formActions">
               <button
                 type="submit"
                 className="btn btnPrimary"
-                disabled={loading || !hasVerifiedWhatsApp(profile)}
+                disabled={loading || otp.length !== 6}
               >
-                {loading ? 'Saving...' : 'Next'}
+                {loading ? 'Verifying…' : 'Verify Discord'}
               </button>
-            </div>
-          </form>
-        )}
+            </form>
 
-        {step === 2 && (
-          <form onSubmit={saveStep2} noValidate>
-            <h1 className="pageTitle">Portfolio</h1>
-            <p className={styles.subtitle}>Genres and performance videos</p>
-            <div className="formGroup">
-              <span className="label" id="genres-label">
-                Genres <span className="requiredMark" aria-hidden="true">*</span>
-              </span>
-              <div className={styles.genreGrid} role="group" aria-labelledby="genres-label">
-                {GENRES.map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    className={`${styles.genreBtn} ${form.genres.includes(g) ? styles.genreSelected : ''}`}
-                    onClick={() => toggleGenre(g)}
-                    aria-pressed={form.genres.includes(g)}
-                  >
-                    {g}
-                  </button>
-                ))}
-              </div>
-              {fieldErrors.genres && <p className="fieldError" role="alert">{fieldErrors.genres}</p>}
-            </div>
-            <div className="formGroup">
-              <span className="label">YouTube links</span>
-              <p className="fieldHint">Optional. Up to {MAX_LINKS} valid YouTube URLs.</p>
-              {form.youtubeLinks.map((link, i) => (
-                <div key={i} className={styles.linkRow}>
-                  <FormField id={`yt-${i}`} label={i === 0 ? 'Link' : `Link ${i + 1}`} error={fieldErrors[`yt-${i}`]}>
-                    <input
-                      type="url"
-                      className="input"
-                      placeholder="https://youtube.com/..."
-                      value={link}
-                      onChange={(e) => updateYoutubeLink(i, e.target.value)}
-                    />
-                  </FormField>
-                  {form.youtubeLinks.length > 1 && (
-                    <button type="button" className="btn btnSecondary" onClick={() => removeYoutubeLink(i)}>
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              {form.youtubeLinks.length < MAX_LINKS && (
-                <button type="button" className="btn btnSecondary" onClick={addYoutubeLink}>Add link</button>
-              )}
-            </div>
-            <div className={styles.navBtns}>
-              <button type="button" className="btn btnSecondary" disabled={loading} onClick={() => { setError(''); setFieldErrors({}); setStep(1); }}>Back</button>
-              <button type="submit" className="btn btnPrimary" disabled={loading}>
-                {loading ? 'Saving...' : 'Next'}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {step === 3 && (
-          <form onSubmit={saveStep3} noValidate>
-            <h1 className="pageTitle">Rates</h1>
-            <p className={styles.subtitle}>Set your booking pricing in whole rupees</p>
-            <div className="formGrid2">
-              <FormField id="minBooking" label="Minimum booking amount (₹)" required error={fieldErrors.minBookingAmount}>
-                <input
-                  type="number"
-                  className="input"
-                  value={form.minBookingAmount}
-                  onChange={(e) => setForm({ ...form, minBookingAmount: e.target.value })}
-                  min={1}
-                  step={1}
-                />
-              </FormField>
-              <FormField id="hourlyRate" label="Hourly rate (₹)" required error={fieldErrors.hourlyRate}>
-                <input
-                  type="number"
-                  className="input"
-                  value={form.hourlyRate}
-                  onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
-                  min={1}
-                  step={1}
-                />
-              </FormField>
-            </div>
-            <div className={styles.navBtns}>
-              <button type="button" className="btn btnSecondary" disabled={loading} onClick={() => { setError(''); setFieldErrors({}); setStep(2); }}>Back</button>
-              <button type="submit" className="btn btnPrimary" disabled={loading}>
-                {loading ? 'Saving...' : 'Complete Setup'}
-              </button>
-            </div>
-          </form>
+            <button
+              type="button"
+              className="btn btnSecondary"
+              onClick={() => setStep('profile')}
+              disabled={loading}
+            >
+              Edit profile details
+            </button>
+          </div>
         )}
       </div>
     </div>

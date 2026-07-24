@@ -112,28 +112,18 @@ export default function AuthPage() {
 
       setAccessToken(data.accessToken);
       const profile = data.profile;
-      const artistDetails = data.artistDetails;
 
-      if (!profile?.onboarding_complete) {
-        router.push('/onboarding/role');
-        return;
-      }
-
-      if (profile?.role === 'artist' && !artistDetails?.is_onboarded) {
+      if (!profile?.onboarding_complete || !profile?.verified_at) {
         router.push('/onboarding');
         return;
       }
 
-      if (['admin', 'superadmin'].includes(profile?.role)) {
+      if (profile?.role === 'admin') {
         router.push('/admin');
         return;
       }
 
-      if (profile?.role === 'artist') {
-        router.push('/dashboard');
-      } else {
-        router.push('/my-bookings');
-      }
+      router.push('/');
       router.refresh();
     } catch (err) {
       setError(err.message);

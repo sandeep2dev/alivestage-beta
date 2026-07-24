@@ -12,15 +12,7 @@ function amountToPaise(amountInr) {
   return Math.round(Number(amountInr) * 100);
 }
 
-function splitAmount(totalAmountInr, commissionRate) {
-  const total = Number(totalAmountInr);
-  const rate = Number(commissionRate) / 100;
-  const platformCommission = Math.round(total * rate * 100) / 100;
-  const artistPayout = Math.round((total - platformCommission) * 100) / 100;
-  return { platformCommission, artistPayout };
-}
-
-async function createOrder({ amount, receipt, notes, artistLinkedAccountId, artistShare }) {
+async function createOrder({ amount, receipt, notes }) {
   const rp = getClient();
   if (!rp) {
     return {
@@ -33,33 +25,21 @@ async function createOrder({ amount, receipt, notes, artistLinkedAccountId, arti
     };
   }
 
-  const options = {
+  const order = await rp.orders.create({
     amount: amountToPaise(amount),
     currency: 'INR',
     receipt,
     notes,
-  };
-
-  // Legacy Razorpay Route escrow — only when explicitly enabled.
-  // New booking flow does not pass linked accounts; leave this dead by default.
-  const routeEnabled = process.env.RAZORPAY_ROUTE_ENABLED === 'true';
-  if (routeEnabled && artistLinkedAccountId && artistShare > 0) {
-    options.transfers = [{
-      account: artistLinkedAccountId,
-      amount: amountToPaise(artistShare),
-      currency: 'INR',
-      on_hold: true,
-      notes,
-    }];
-  }
-
-  const order = await rp.orders.create(options);
+  });
   return { mock: false, order };
 }
 
 function verifyPaymentSignature(orderId, paymentId, signature) {
   const secret = process.env.RAZORPAY_KEY_SECRET;
-  if (!secret) return true;
+  if (!secret) {
+    // Dev/mock mode without Razorpay secrets
+    return Boolean(orderId && paymentId);
+  }
   const body = `${orderId}|${paymentId}`;
   const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
   return expected === signature;
@@ -78,20 +58,15 @@ async function refundPayment(paymentId, amountInr) {
   return refund;
 }
 
-async function releaseTransfer(transferId) {
-  const rp = getClient();
-  if (!rp || !transferId) {
-    return { skipped: true };
-  }
-  return rp.transfers.edit(transferId, { on_hold: false });
+function publicKey() {
+  return process.env.RAZORPAY_KEY_ID || 'mock_key';
 }
 
 module.exports = {
   getClient,
   amountToPaise,
-  splitAmount,
   createOrder,
   verifyPaymentSignature,
   refundPayment,
-  releaseTransfer,
+  publicKey,
 };

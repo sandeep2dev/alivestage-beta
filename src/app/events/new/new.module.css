@@ -1,0 +1,12 @@
+.page {
+  padding-block: var(--page-pad-y);
+  max-width: 40rem;
+}
+
+.form {
+  margin-top: var(--space-lg);
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}

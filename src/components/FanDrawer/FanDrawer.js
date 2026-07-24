@@ -7,9 +7,9 @@ import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
 import styles from './FanDrawer.module.css';
 
 const LINKS = [
-  { href: '/', label: 'Home' },
-  { href: '/my-bookings', label: 'My bookings' },
-  { href: '/transactions', label: 'Transactions' },
+  { href: '/', label: 'Jam feed' },
+  { href: '/my-events', label: 'My events' },
+  { href: '/events/new', label: 'Host a jam' },
   { href: '/profile', label: 'Profile' },
 ];
 
@@ -31,6 +31,8 @@ export default function FanDrawer({ open, profile, onClose, onHelp, onSignOut })
 
   if (!open) return null;
 
+  const verified = Boolean(profile?.verified_at);
+
   return (
     <div className={styles.root}>
       <button type="button" className={styles.backdrop} aria-label="Close menu" onClick={onClose} />
@@ -38,8 +40,10 @@ export default function FanDrawer({ open, profile, onClose, onHelp, onSignOut })
         <div className={styles.header}>
           <ProfileAvatar profile={profile} size="lg" />
           <div className={styles.meta}>
-            <strong className={styles.name}>{profile?.name || 'Fan'}</strong>
-            <span className={styles.email}>{profile?.email}</span>
+            <strong className={styles.name}>{profile?.name || 'Member'}</strong>
+            <span className={styles.email}>
+              {verified ? `@${profile?.discord_username || 'verified'}` : 'Discord not verified'}
+            </span>
           </div>
           <button type="button" className={styles.close} onClick={onClose} aria-label="Close">
             ×
@@ -57,6 +61,11 @@ export default function FanDrawer({ open, profile, onClose, onHelp, onSignOut })
               {item.label}
             </Link>
           ))}
+          {!verified && (
+            <Link href="/onboarding" className={styles.link} onClick={onClose}>
+              Finish onboarding
+            </Link>
+          )}
           <button type="button" className={styles.linkButton} onClick={onHelp}>
             Help
           </button>
