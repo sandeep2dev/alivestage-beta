@@ -50,7 +50,6 @@ export default function PublicUserPage() {
           <h1 className="pageTitle">{profile.name}</h1>
           <p className={styles.meta}>
             {profile.city || 'City not set'}
-            {profile.discord_username ? ` · @${profile.discord_username}` : ''}
           </p>
           <p className={styles.rep}>
             {rep?.enough

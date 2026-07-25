@@ -75,8 +75,7 @@ export default function OnboardingPage() {
       <div className={`card ${styles.card}`}>
         <h1 className="pageTitle">Quick setup</h1>
         <p className={styles.subtitle}>
-          Add your city so we can prioritize local jams. Discord verification is only required when
-          you host or join (payment actions).
+          Add your city so we can prioritize local jams. You can host or join after this step.
         </p>
 
         <FormAlert type="error">{error}</FormAlert>

@@ -1,5 +1,5 @@
 const { supabase } = require('../config/supabase');
-const { requireAuth, requireVerified } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 const { applyRatingToReputation } = require('../services/reputation');
 
 const router = require('express').Router();
@@ -19,7 +19,7 @@ async function activeMembership(eventId, userId) {
  * Submit a rating for a person at a completed event.
  * rating_type: host_rating (ratee is host) | joiner_rating (ratee is a joiner)
  */
-router.post('/', requireAuth, requireVerified, async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const eventId = req.body?.event_id || req.body?.eventId;
     const rateeId = req.body?.ratee_id || req.body?.rateeId;

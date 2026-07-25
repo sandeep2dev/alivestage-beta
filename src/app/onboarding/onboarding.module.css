@@ -12,20 +12,3 @@
   color: var(--color-text-muted);
   margin: 0 0 var(--space-lg);
 }
-
-.discordStep {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.steps {
-  margin: 0 0 var(--space-md);
-  padding-left: 1.25rem;
-  color: var(--color-text-muted);
-  line-height: 1.6;
-}
-
-.steps a {
-  color: var(--color-primary);
-}

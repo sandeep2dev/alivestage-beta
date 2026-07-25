@@ -1,8 +1,4 @@
 const crypto = require('crypto');
-const {
-  DISCORD_OTP_TTL_MS,
-  DISCORD_OTP_COOLDOWN_MS,
-} = require('../config/community');
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
 const OTP_LENGTH = 6;
@@ -67,14 +63,6 @@ function createOtp(key, {
   return { ok: true, code };
 }
 
-function createDiscordOtp(key) {
-  return createOtp(key, {
-    enforceCooldown: true,
-    ttlMs: DISCORD_OTP_TTL_MS,
-    cooldownMs: DISCORD_OTP_COOLDOWN_MS,
-  });
-}
-
 function verifyOtp(key, code) {
   const storeKey = normalizeKey(key);
   const entry = store.get(storeKey);
@@ -101,20 +89,12 @@ function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
-function discordOtpKey(profileId) {
-  return `discord:${profileId}`;
-}
-
 module.exports = {
   createOtp,
-  createDiscordOtp,
   verifyOtp,
   normalizeEmail,
   normalizeKey,
-  discordOtpKey,
   OTP_TTL_MS: DEFAULT_TTL_MS,
   MAX_ATTEMPTS,
   RESEND_COOLDOWN_MS: DEFAULT_COOLDOWN_MS,
-  DISCORD_OTP_TTL_MS,
-  DISCORD_OTP_COOLDOWN_MS,
 };

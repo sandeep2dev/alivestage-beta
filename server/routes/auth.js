@@ -1,15 +1,8 @@
 const { supabase } = require('../config/supabase');
-const {
-  createOtp,
-  createDiscordOtp,
-  verifyOtp,
-  normalizeEmail,
-  discordOtpKey,
-} = require('../services/otp');
+const { createOtp, verifyOtp, normalizeEmail } = require('../services/otp');
 const { signToken } = require('../services/jwt');
 const { sendMail } = require('../services/email');
 const { requireAuth } = require('../middleware/auth');
-const { sendOtpDm, inviteUrl } = require('../services/discord');
 const { serializePublicProfile } = require('../services/reputation');
 
 const router = require('express').Router();
@@ -93,10 +86,7 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
-  res.json({
-    profile: req.profile,
-    discordInviteUrl: inviteUrl(),
-  });
+  res.json({ profile: req.profile });
 });
 
 router.patch('/profile', requireAuth, async (req, res) => {
@@ -104,11 +94,6 @@ router.patch('/profile', requireAuth, async (req, res) => {
     const name = String(req.body?.name || '').trim();
     const city = String(req.body?.city || '').trim();
     const pincode = String(req.body?.pincode || '').trim();
-    const discordUsernameRaw = req.body?.discord_username ?? req.body?.discordUsername;
-    const discordUsername =
-      discordUsernameRaw == null
-        ? undefined
-        : String(discordUsernameRaw).trim().replace(/^@/, '');
 
     const updates = {};
 
@@ -136,23 +121,10 @@ router.patch('/profile', requireAuth, async (req, res) => {
       updates.pincode = pincode;
     }
 
-    if (discordUsername !== undefined) {
-      if (req.profile.verified_at && discordUsername !== req.profile.discord_username) {
-        return res.status(400).json({
-          message: 'Discord username is locked after verification',
-        });
-      }
-      if (discordUsername.length < 2) {
-        return res.status(400).json({ message: 'Discord username is required' });
-      }
-      updates.discord_username = discordUsername;
-    }
-
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ message: 'No valid fields to update' });
     }
 
-    // Complete onboarding once city + pincode are set (Discord is deferred)
     const nextCity = updates.city ?? req.profile.city;
     const nextPin = updates.pincode ?? req.profile.pincode;
     if (nextCity && nextPin) {
@@ -213,132 +185,6 @@ router.post('/onboarding', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[auth/onboarding]', err);
     res.status(500).json({ message: err.message || 'Failed to save onboarding' });
-  }
-});
-
-router.post('/discord/send-otp', requireAuth, async (req, res) => {
-  try {
-    const discordUsername = String(
-      req.body?.discord_username ||
-        req.body?.discordUsername ||
-        req.profile.discord_username ||
-        ''
-    )
-      .trim()
-      .replace(/^@/, '');
-
-    if (!discordUsername) {
-      return res.status(400).json({
-        message: 'Set your Discord username first, and join the Alivestage server',
-        inviteUrl: inviteUrl(),
-      });
-    }
-
-    if (req.profile.verified_at) {
-      return res.status(400).json({ message: 'Already verified' });
-    }
-
-    const created = createDiscordOtp(discordOtpKey(req.profile.id));
-    if (!created.ok) {
-      return res.status(429).json({
-        message: created.message,
-        retryAfterSec: created.retryAfterSec,
-      });
-    }
-
-    // Persist username before DM so verify can lock it
-    if (discordUsername !== req.profile.discord_username) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ discord_username: discordUsername })
-        .eq('id', req.profile.id);
-      if (error) throw error;
-    }
-
-    const sent = await sendOtpDm({
-      discordUsername,
-      code: created.code,
-    });
-    if (!sent.ok) {
-      return res.status(400).json({ message: sent.message, inviteUrl: inviteUrl() });
-    }
-
-    // Stash resolved discord id on profile temporarily via draft field — store in memory on OTP key
-    // We return discordId only after verify; keep resolved id on the OTP side-channel:
-    req.app.locals.discordResolve = req.app.locals.discordResolve || new Map();
-    req.app.locals.discordResolve.set(req.profile.id, sent.discordId);
-
-    res.json({
-      message: 'OTP sent via Discord DM',
-      inviteUrl: inviteUrl(),
-      mock: Boolean(sent.mock),
-    });
-  } catch (err) {
-    console.error('[auth/discord/send-otp]', err);
-    res.status(500).json({ message: err.message || 'Failed to send Discord OTP' });
-  }
-});
-
-router.post('/discord/verify-otp', requireAuth, async (req, res) => {
-  try {
-    const code = req.body?.otp || req.body?.code;
-    if (!code) {
-      return res.status(400).json({ message: 'OTP is required' });
-    }
-    if (req.profile.verified_at) {
-      return res.status(400).json({ message: 'Already verified' });
-    }
-    if (!req.profile.discord_username) {
-      return res.status(400).json({ message: 'Discord username is required' });
-    }
-
-    const result = verifyOtp(discordOtpKey(req.profile.id), code);
-    if (!result.ok) {
-      return res.status(400).json({ message: result.message });
-    }
-
-    const resolveMap = req.app.locals.discordResolve || new Map();
-    let discordId = resolveMap.get(req.profile.id);
-    if (!discordId) {
-      const { resolveGuildMember } = require('../services/discord');
-      const resolved = await resolveGuildMember(req.profile.discord_username);
-      if (!resolved.ok) {
-        return res.status(400).json({ message: resolved.message, inviteUrl: inviteUrl() });
-      }
-      discordId = resolved.discordId;
-    }
-
-    // Ensure discord_id uniqueness
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('discord_id', discordId)
-      .neq('id', req.profile.id)
-      .maybeSingle();
-    if (existing) {
-      return res.status(409).json({
-        message: 'This Discord account is already linked to another profile',
-      });
-    }
-
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .update({
-        discord_id: discordId,
-        verified_at: new Date().toISOString(),
-      })
-      .eq('id', req.profile.id)
-      .select('*')
-      .single();
-    if (error) throw error;
-
-    resolveMap.delete(req.profile.id);
-
-    const accessToken = signToken(profile);
-    res.json({ profile, accessToken, verified: true });
-  } catch (err) {
-    console.error('[auth/discord/verify-otp]', err);
-    res.status(500).json({ message: err.message || 'Failed to verify Discord OTP' });
   }
 });
 

@@ -99,11 +99,7 @@ export default function ProfilePage() {
         <ProfileAvatar profile={profile} size="lg" />
         <div>
           <h1 className="pageTitle">{profile.name || 'Profile'}</h1>
-          <p className={styles.meta}>
-            {profile.verified_at
-              ? `Discord @${profile.discord_username}`
-              : 'Discord verified when you host or join'}
-          </p>
+          <p className={styles.meta}>{profile.email}</p>
           <p className={styles.meta}>
             Reputation:{' '}
             {showRep ? `${rep} (${count} ratings)` : 'Not enough ratings yet'}

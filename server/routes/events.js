@@ -1,5 +1,5 @@
 const { supabase } = require('../config/supabase');
-const { requireAuth, optionalAuth, requireVerified } = require('../middleware/auth');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 const {
   createOrder,
   verifyPaymentSignature,
@@ -9,7 +9,6 @@ const {
 const { saveDraft, takeDraft, peekDraft } = require('../services/pendingOrders');
 const { serializeEvent } = require('../services/eventSerializer');
 const { sendMail } = require('../services/email');
-const { sendDirectMessage } = require('../services/discord');
 const {
   HOST_CREATE_FEE,
   JOIN_FEE,
@@ -107,12 +106,6 @@ async function notifyJoinersCancelled(event, joiners) {
           <p>Your ₹${JOIN_FEE} join fee has been fully refunded.</p>
         `,
       });
-    }
-    if (profile?.discord_id) {
-      await sendDirectMessage(
-        profile.discord_id,
-        `Alivestage: "${event.title}" was cancelled by the host. Your ₹${JOIN_FEE} join fee has been fully refunded.`
-      );
     }
   }
 }
@@ -267,10 +260,8 @@ router.get('/:id', optionalAuth, async (req, res) => {
   }
 });
 
-/** Create Razorpay order for host create fee; event created only after confirm.
- *  Guard: requireVerified runs first — never create a Razorpay order for unverified users.
- */
-router.post('/create-order', requireAuth, requireVerified, async (req, res) => {
+/** Create Razorpay order for host create fee; event created only after confirm. */
+router.post('/create-order', requireAuth, async (req, res) => {
   try {
     const parsed = validateEventPayload(req.body);
     if (!parsed.ok) return res.status(400).json({ message: parsed.message });
@@ -302,7 +293,7 @@ router.post('/create-order', requireAuth, requireVerified, async (req, res) => {
   }
 });
 
-router.post('/confirm-create', requireAuth, requireVerified, async (req, res) => {
+router.post('/confirm-create', requireAuth, async (req, res) => {
   try {
     const orderId = req.body?.razorpay_order_id || req.body?.orderId;
     const paymentId = req.body?.razorpay_payment_id || req.body?.paymentId || `mock_pay_${Date.now()}`;
@@ -355,8 +346,7 @@ router.post('/confirm-create', requireAuth, requireVerified, async (req, res) =>
   }
 });
 
-/** Join order — requireVerified first so unverified users never hit Razorpay. */
-router.post('/:id/join-order', requireAuth, requireVerified, async (req, res) => {
+router.post('/:id/join-order', requireAuth, async (req, res) => {
   try {
     const { data: event, error } = await supabase
       .from('events')
@@ -408,7 +398,7 @@ router.post('/:id/join-order', requireAuth, requireVerified, async (req, res) =>
   }
 });
 
-router.post('/:id/confirm-join', requireAuth, requireVerified, async (req, res) => {
+router.post('/:id/confirm-join', requireAuth, async (req, res) => {
   try {
     const eventId = req.params.id;
     const orderId = req.body?.razorpay_order_id || req.body?.orderId;
@@ -503,7 +493,7 @@ router.post('/:id/confirm-join', requireAuth, requireVerified, async (req, res) 
   }
 });
 
-router.post('/:id/cancel', requireAuth, requireVerified, async (req, res) => {
+router.post('/:id/cancel', requireAuth, async (req, res) => {
   try {
     const { data: event, error } = await supabase
       .from('events')
@@ -522,7 +512,7 @@ router.post('/:id/cancel', requireAuth, requireVerified, async (req, res) => {
     const { data: memberships } = await supabase
       .from('event_memberships')
       .select(
-        '*, payment:payments(*), profile:profiles!event_memberships_user_id_fkey(id, email, name, discord_id)'
+        '*, payment:payments(*), profile:profiles!event_memberships_user_id_fkey(id, email, name)'
       )
       .eq('event_id', event.id)
       .is('cancelled_at', null);
@@ -570,7 +560,7 @@ router.post('/:id/cancel', requireAuth, requireVerified, async (req, res) => {
   }
 });
 
-router.post('/:id/leave', requireAuth, requireVerified, async (req, res) => {
+router.post('/:id/leave', requireAuth, async (req, res) => {
   try {
     const { data: event, error } = await supabase
       .from('events')
@@ -619,7 +609,7 @@ router.post('/:id/leave', requireAuth, requireVerified, async (req, res) => {
   }
 });
 
-router.post('/:id/go-live', requireAuth, requireVerified, async (req, res) => {
+router.post('/:id/go-live', requireAuth, async (req, res) => {
   try {
     const { data: event, error } = await supabase
       .from('events')
@@ -656,7 +646,7 @@ router.post('/:id/go-live', requireAuth, requireVerified, async (req, res) => {
   }
 });
 
-router.post('/:id/complete', requireAuth, requireVerified, async (req, res) => {
+router.post('/:id/complete', requireAuth, async (req, res) => {
   try {
     const { data: event, error } = await supabase
       .from('events')
@@ -703,7 +693,7 @@ router.post('/:id/complete', requireAuth, requireVerified, async (req, res) => {
 });
 
 /** Host marks attendance for members */
-router.post('/:id/attendance', requireAuth, requireVerified, async (req, res) => {
+router.post('/:id/attendance', requireAuth, async (req, res) => {
   try {
     const { data: event, error } = await supabase
       .from('events')
@@ -751,7 +741,7 @@ router.post('/:id/attendance', requireAuth, requireVerified, async (req, res) =>
 });
 
 /** Joiner self-mark present (informational only) */
-router.post('/:id/present', requireAuth, requireVerified, async (req, res) => {
+router.post('/:id/present', requireAuth, async (req, res) => {
   try {
     const membership = await loadMembership(req.params.id, req.profile.id);
     if (!membership) {

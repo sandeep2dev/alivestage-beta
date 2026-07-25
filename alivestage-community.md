@@ -1,6 +1,6 @@
-# Cursor Prompt: Alivestage Community — Event Hosting & Jamming Flow
+# Cursor Prompt: AliVeStage Community — Event Hosting & Jamming Flow
 
-Stack: Next.js + Node + Supabase (Postgres), Razorpay for payments, Discord bot (discord.js) for identity verification.
+Stack: Next.js + Node + Supabase (Postgres), Razorpay for payments. Optional Discord incoming webhook for Help requests only (no Discord identity/OTP).
 
 ---
 
@@ -11,11 +11,10 @@ This is a portfolio backend project — a community jamming platform, not a comm
 ## Core Entities
 
 **User**
-- `id`, `email` (collected, unverified — entry field only)
-- `discord_username`, `discord_id` (verified via OTP — this is the real identity anchor)
+- `id`, `email` (collected, unverified — entry field only; email OTP is for session login)
 - `city`, `pincode`
 - `reputation_score` (aggregate, nullable until 10+ ratings), `rating_count`
-- `verified_at` (timestamp, null until Discord OTP confirmed)
+- `onboarding_complete`
 
 **Event**
 - `id`, `host_id` (FK → User)
@@ -45,13 +44,12 @@ This is a portfolio backend project — a community jamming platform, not a comm
 - `score` (1-5), `submitted_at`
 - Constraint: only insertable if `EventMembership.host_marked_attended = true` for both rater and ratee (where applicable)
 
-## Discord OTP Verification Flow
+## Auth
 
-1. User signs up with email (unverified) + Discord username.
-2. Bot DMs a 6-digit OTP to that Discord user (requires user to have joined the Alivestage Discord server first — surface this as an onboarding step: "join our server, then verify").
-3. OTP stored hashed, 5-minute expiry, max 5 attempts, 60-second resend cooldown.
-4. User pastes OTP into onboarding form → backend validates → `verified_at` set, `discord_id` locked to account.
-5. Unverified users cannot create or join events.
+1. User signs up / signs in with email OTP.
+2. Completes onboarding with name, city, pincode.
+3. Can browse the feed immediately; host/join go straight to Razorpay.
+4. Optional Help from the sidebar posts to `DISCORD_SUPPORT_WEBHOOK_URL` (incoming webhook only — not identity).
 
 ## Payment & Refund State Machine
 
@@ -66,7 +64,7 @@ This is a portfolio backend project — a community jamming platform, not a comm
 **Host cancels event:**
 - All `EventMembership` payments → `refunded_full` (100% of ₹50 back).
 - Host's ₹200 create fee → NOT refunded.
-- Event status → `cancelled`. Notify all joiners via email/Discord.
+- Event status → `cancelled`. Notify all joiners via email.
 
 **Joiner cancels their own join:**
 - Their payment → `refunded_partial`, `refund_amount = 25` (50%).
@@ -91,7 +89,7 @@ This is a portfolio backend project — a community jamming platform, not a comm
 ## Attendance & Rating Flow
 
 1. Event `end_at` passes → cron waits 24-48h grace period, then fires once.
-2. For each `EventMembership` where `host_marked_attended = true`, send a rating prompt via email + Discord DM.
+2. For each `EventMembership` where `host_marked_attended = true`, send a rating prompt via email.
 3. Rating window open for 3-5 days (configurable constant), then locks — no more submissions accepted after.
 4. Ratings write to `Rating` table. Aggregate `reputation_score` recalculated on each new rating (simple running average is fine).
 5. `reputation_score` shown publicly on profile only when `rating_count >= 10`. Below that, show "Not enough ratings yet" — but keep tracking count/score internally regardless of the display threshold.
@@ -100,13 +98,13 @@ This is a portfolio backend project — a community jamming platform, not a comm
 ## Build Priorities (suggest this order)
 
 1. Supabase schema + migrations for all entities above.
-2. Discord bot: OTP generation/DM/validation commands.
-3. Auth/onboarding flow (email entry + Discord verify → profile completion with city/pincode).
-4. Event CRUD + Razorpay charge-on-create.
-5. Join flow + Razorpay charge-on-join + access-control serializer.
-6. Cancellation flow (host and joiner paths) with Razorpay refund API calls.
-7. Host attendance marking UI/endpoint.
-8. Cron job for rating-window trigger + rating submission endpoints.
-9. Reputation aggregation + public display threshold logic.
+2. Auth/onboarding flow (email OTP → profile completion with city/pincode).
+3. Event CRUD + Razorpay charge-on-create.
+4. Join flow + Razorpay charge-on-join + access-control serializer.
+5. Cancellation flow (host and joiner paths) with Razorpay refund API calls.
+6. Host attendance marking UI/endpoint.
+7. Cron job for rating-window trigger + rating submission endpoints.
+8. Reputation aggregation + public display threshold logic.
+9. Help → Discord support webhook (sidebar).
 
-Keep each piece testable in isolation — this is a portfolio project, so clean separation between payment logic, Discord bot logic, and event state machine logic matters more than shipping speed.
+Keep each piece testable in isolation — this is a portfolio project, so clean separation between payment logic and event state machine logic matters more than shipping speed.

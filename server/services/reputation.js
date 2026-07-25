@@ -41,8 +41,6 @@ function serializePublicProfile(profile) {
     name: profile.name,
     city: profile.city,
     avatar_url: profile.avatar_url,
-    discord_username: profile.discord_username,
-    verified: Boolean(profile.verified_at),
     reputation: publicReputation(profile),
     created_at: profile.created_at,
   };

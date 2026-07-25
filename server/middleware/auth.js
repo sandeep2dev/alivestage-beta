@@ -59,18 +59,6 @@ async function optionalAuth(req, _res, next) {
   next();
 }
 
-function requireVerified(req, res, next) {
-  if (!req.profile?.verified_at) {
-    const { inviteUrl } = require('../services/discord');
-    return res.status(403).json({
-      message: 'Verify via Discord to continue with payment',
-      code: 'DISCORD_REQUIRED',
-      inviteUrl: inviteUrl(),
-    });
-  }
-  next();
-}
-
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.profile || !roles.includes(req.profile.role)) {
@@ -90,7 +78,6 @@ function requireAdmin(req, res, next) {
 module.exports = {
   requireAuth,
   optionalAuth,
-  requireVerified,
   requireRole,
   requireAdmin,
 };

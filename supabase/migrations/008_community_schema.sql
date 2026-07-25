@@ -36,19 +36,15 @@ CREATE TABLE profiles (
     email TEXT UNIQUE NOT NULL,
     role user_role NOT NULL DEFAULT 'member',
     avatar_url TEXT,
-    discord_username TEXT,
-    discord_id TEXT UNIQUE,
     city TEXT NOT NULL DEFAULT '',
     pincode TEXT NOT NULL DEFAULT '',
     reputation_score NUMERIC(4, 2),
     rating_count INT NOT NULL DEFAULT 0,
-    verified_at TIMESTAMP WITH TIME ZONE,
     onboarding_complete BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX profiles_city_idx ON profiles (city);
-CREATE INDEX profiles_discord_username_idx ON profiles (discord_username);
 
 -- ---------------------------------------------------------------------------
 -- Events

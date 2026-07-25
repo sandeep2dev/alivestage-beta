@@ -32,7 +32,6 @@ export default function FanDrawer({ open, profile, onClose, onHelp, onSignOut })
   if (!open) return null;
 
   const needsOnboarding = profile && !profile.onboarding_complete;
-  const verified = Boolean(profile?.verified_at);
 
   return (
     <div className={styles.root}>
@@ -42,9 +41,7 @@ export default function FanDrawer({ open, profile, onClose, onHelp, onSignOut })
           <ProfileAvatar profile={profile} size="lg" />
           <div className={styles.meta}>
             <strong className={styles.name}>{profile?.name || 'Member'}</strong>
-            <span className={styles.email}>
-              {verified ? `@${profile?.discord_username || 'verified'}` : 'Discord when you host/join'}
-            </span>
+            <span className={styles.email}>{profile?.email}</span>
           </div>
           <button type="button" className={styles.close} onClick={onClose} aria-label="Close">
             ×

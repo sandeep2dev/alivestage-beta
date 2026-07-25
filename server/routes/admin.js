@@ -25,7 +25,7 @@ router.get('/users', async (_req, res) => {
     const { data, error } = await supabase
       .from('profiles')
       .select(
-        'id, name, email, city, verified_at, reputation_score, rating_count, created_at'
+        'id, name, email, city, reputation_score, rating_count, created_at'
       )
       .order('created_at', { ascending: false })
       .limit(100);

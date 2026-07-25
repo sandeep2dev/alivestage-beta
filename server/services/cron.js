@@ -1,7 +1,6 @@
 const cron = require('node-cron');
 const { supabase } = require('../config/supabase');
 const { sendMail } = require('./email');
-const { sendDirectMessage } = require('./discord');
 const { RATING_GRACE_HOURS } = require('../config/community');
 
 /**
@@ -27,7 +26,6 @@ async function processRatingPrompts() {
       event.rating_window_closes_at &&
       new Date(event.rating_window_closes_at).getTime() < Date.now()
     ) {
-      // Window already closed — mark prompts as handled so we don't retry forever
       await supabase
         .from('events')
         .update({ rating_prompts_sent_at: new Date().toISOString() })
@@ -38,7 +36,7 @@ async function processRatingPrompts() {
     const { data: memberships } = await supabase
       .from('event_memberships')
       .select(
-        'user_id, profile:profiles!event_memberships_user_id_fkey(id, email, name, discord_id)'
+        'user_id, profile:profiles!event_memberships_user_id_fkey(id, email, name)'
       )
       .eq('event_id', event.id)
       .is('cancelled_at', null)
@@ -46,7 +44,7 @@ async function processRatingPrompts() {
 
     const { data: host } = await supabase
       .from('profiles')
-      .select('id, email, name, discord_id')
+      .select('id, email, name')
       .eq('id', event.host_id)
       .maybeSingle();
 
@@ -57,23 +55,18 @@ async function processRatingPrompts() {
       if (!profile?.id || seen.has(profile.id)) continue;
       seen.add(profile.id);
 
-      const subject = `Rate your jam: ${event.title}`;
-      const html = `
-        <h2>How was the jam?</h2>
-        <p>Hi ${profile.name || 'there'},</p>
-        <p>Please rate people you jammed with at <strong>${event.title}</strong>.</p>
-        <p>The rating window closes soon — open Alivestage to submit your ratings.</p>
-      `;
+      if (!profile.email) continue;
 
-      if (profile.email) {
-        await sendMail({ to: profile.email, subject, html });
-      }
-      if (profile.discord_id) {
-        await sendDirectMessage(
-          profile.discord_id,
-          `Alivestage: Rate your jam "${event.title}" before the window closes.`
-        );
-      }
+      await sendMail({
+        to: profile.email,
+        subject: `Rate your jam: ${event.title}`,
+        html: `
+          <h2>How was the jam?</h2>
+          <p>Hi ${profile.name || 'there'},</p>
+          <p>Please rate people you jammed with at <strong>${event.title}</strong>.</p>
+          <p>The rating window closes soon — open Alivestage to submit your ratings.</p>
+        `,
+      });
     }
 
     await supabase

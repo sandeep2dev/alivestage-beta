@@ -87,7 +87,6 @@ export default function AdminPage() {
                 <th>Name</th>
                 <th>Email</th>
                 <th>City</th>
-                <th>Verified</th>
                 <th>Ratings</th>
               </tr>
             </thead>
@@ -97,7 +96,6 @@ export default function AdminPage() {
                   <td>{u.name}</td>
                   <td>{u.email}</td>
                   <td>{u.city}</td>
-                  <td>{u.verified_at ? 'yes' : 'no'}</td>
                   <td>{u.rating_count}</td>
                 </tr>
               ))}
