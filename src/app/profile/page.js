@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken, setAccessToken } from '@/lib/auth';
@@ -103,17 +102,12 @@ export default function ProfilePage() {
           <p className={styles.meta}>
             {profile.verified_at
               ? `Discord @${profile.discord_username}`
-              : 'Discord not verified'}
+              : 'Discord verified when you host or join'}
           </p>
           <p className={styles.meta}>
             Reputation:{' '}
             {showRep ? `${rep} (${count} ratings)` : 'Not enough ratings yet'}
           </p>
-          {!profile.verified_at && (
-            <Link href="/onboarding" className="btn btnSecondary">
-              Verify Discord
-            </Link>
-          )}
         </div>
       </div>
 

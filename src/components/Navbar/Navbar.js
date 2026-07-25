@@ -56,7 +56,7 @@ export default function Navbar() {
           <Logo variant="full" href="/" size="md" />
 
           <div className={styles.right}>
-            {profile?.verified_at && (
+            {profile && (
               <Link href="/events/new" className={styles.dashboardLink}>
                 Host a jam
               </Link>

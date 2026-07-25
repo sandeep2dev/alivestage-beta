@@ -16,7 +16,7 @@ const router = require('express').Router();
 
 function otpEmailHtml(code) {
   return `
-    <h2>Your AliVeStage sign-in code</h2>
+    <h2>Your Alivestage sign-in code</h2>
     <p>Use this one-time passcode to sign in or create your account:</p>
     <p style="font-size:28px;letter-spacing:6px;font-weight:bold;">${code}</p>
     <p>This code expires in 10 minutes. If you did not request it, you can ignore this email.</p>
@@ -36,7 +36,7 @@ router.post('/send-otp', async (req, res) => {
     }
     await sendMail({
       to: email,
-      subject: 'Your AliVeStage sign-in code',
+      subject: 'Your Alivestage sign-in code',
       html: otpEmailHtml(created.code),
     });
 
@@ -152,10 +152,10 @@ router.patch('/profile', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'No valid fields to update' });
     }
 
-    // Complete onboarding once verified + city/pincode present
+    // Complete onboarding once city + pincode are set (Discord is deferred)
     const nextCity = updates.city ?? req.profile.city;
     const nextPin = updates.pincode ?? req.profile.pincode;
-    if (req.profile.verified_at && nextCity && nextPin) {
+    if (nextCity && nextPin) {
       updates.onboarding_complete = true;
     }
 
@@ -180,11 +180,6 @@ router.post('/onboarding', requireAuth, async (req, res) => {
     const name = String(req.body?.name || '').trim();
     const city = String(req.body?.city || '').trim();
     const pincode = String(req.body?.pincode || '').trim();
-    const discordUsername = String(
-      req.body?.discord_username || req.body?.discordUsername || ''
-    )
-      .trim()
-      .replace(/^@/, '');
 
     if (name.length < 2) {
       return res.status(400).json({ message: 'Name must be at least 2 characters' });
@@ -195,14 +190,6 @@ router.post('/onboarding', requireAuth, async (req, res) => {
     if (!/^\d{6}$/.test(pincode)) {
       return res.status(400).json({ message: 'Pincode must be 6 digits' });
     }
-    if (discordUsername.length < 2) {
-      return res.status(400).json({ message: 'Discord username is required' });
-    }
-    if (req.profile.verified_at && discordUsername !== req.profile.discord_username) {
-      return res.status(400).json({
-        message: 'Discord username is locked after verification',
-      });
-    }
 
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -210,7 +197,7 @@ router.post('/onboarding', requireAuth, async (req, res) => {
         name,
         city,
         pincode,
-        discord_username: discordUsername,
+        onboarding_complete: true,
       })
       .eq('id', req.profile.id)
       .select('*')
@@ -221,8 +208,7 @@ router.post('/onboarding', requireAuth, async (req, res) => {
     res.json({
       profile,
       accessToken,
-      discordInviteUrl: inviteUrl(),
-      next: profile.verified_at ? 'done' : 'discord_verify',
+      next: 'done',
     });
   } catch (err) {
     console.error('[auth/onboarding]', err);
@@ -243,7 +229,7 @@ router.post('/discord/send-otp', requireAuth, async (req, res) => {
 
     if (!discordUsername) {
       return res.status(400).json({
-        message: 'Set your Discord username first, and join the AliVeStage server',
+        message: 'Set your Discord username first, and join the Alivestage server',
         inviteUrl: inviteUrl(),
       });
     }
@@ -335,14 +321,11 @@ router.post('/discord/verify-otp', requireAuth, async (req, res) => {
       });
     }
 
-    const onboardingComplete = Boolean(req.profile.city && req.profile.pincode);
-
     const { data: profile, error } = await supabase
       .from('profiles')
       .update({
         discord_id: discordId,
         verified_at: new Date().toISOString(),
-        onboarding_complete: onboardingComplete,
       })
       .eq('id', req.profile.id)
       .select('*')

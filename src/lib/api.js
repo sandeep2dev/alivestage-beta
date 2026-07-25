@@ -1,5 +1,16 @@
 const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:5001';
 
+export class ApiError extends Error {
+  constructor(message, { code, status, inviteUrl, data } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code || null;
+    this.status = status || null;
+    this.inviteUrl = inviteUrl || null;
+    this.data = data || null;
+  }
+}
+
 export async function apiFetch(path, { method = 'GET', body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -12,7 +23,12 @@ export async function apiFetch(path, { method = 'GET', body, token } = {}) {
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.message || `Request failed (${res.status})`);
+    throw new ApiError(data.message || `Request failed (${res.status})`, {
+      code: data.code,
+      status: res.status,
+      inviteUrl: data.inviteUrl,
+      data,
+    });
   }
   return data;
 }
@@ -38,7 +54,7 @@ export async function openRazorpayCheckout({ key, orderId, amount, name, email, 
       amount,
       currency: 'INR',
       name: 'Alivestage',
-      description: 'AliVeStage fee',
+      description: 'Alivestage fee',
       order_id: orderId,
       prefill: { name, email },
       handler: (response) => {

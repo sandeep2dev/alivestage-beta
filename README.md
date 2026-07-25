@@ -1,12 +1,13 @@
-# AliVeStage — Community Jamming
+# Alivestage — Community Jamming
 
 Portfolio community platform for hosting and joining local jams. Built with Next.js, Express, Supabase, Razorpay (collection-only fees), and Discord OTP identity.
 
 ## Model
 
-- **Identity:** Email OTP for session login; Discord OTP (guild member DM) locks `discord_id` and sets `verified_at`.
-- **Host create:** ₹200 fee → event published (`created`). Host fee is never refunded on cancel.
-- **Join:** ₹50 fee → membership + precise address unlocked (server-side serializer ACL).
+- **Identity:** Email OTP for session login + city/pincode onboarding. Discord OTP is deferred until the first paid host/join action (`verified_at` gate before any Razorpay order).
+- **Browse:** Unverified users can view the feed and public event fields (no `precise_address` until joined+paid).
+- **Host create:** Discord verify (if needed) → ₹200 fee → event published (`created`). Host fee is never refunded on cancel.
+- **Join:** Discord verify (if needed) → ₹50 fee → membership + precise address unlocked (server-side serializer ACL).
 - **Host cancel:** full ₹50 refund to joiners; soft-delete memberships.
 - **Joiner leave:** 50% refund (₹25); soft-delete membership.
 - **Attendance:** host marks attended; self-present is informational only.

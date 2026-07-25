@@ -111,7 +111,7 @@ async function notifyJoinersCancelled(event, joiners) {
     if (profile?.discord_id) {
       await sendDirectMessage(
         profile.discord_id,
-        `AliVeStage: "${event.title}" was cancelled by the host. Your ₹${JOIN_FEE} join fee has been fully refunded.`
+        `Alivestage: "${event.title}" was cancelled by the host. Your ₹${JOIN_FEE} join fee has been fully refunded.`
       );
     }
   }
@@ -267,7 +267,9 @@ router.get('/:id', optionalAuth, async (req, res) => {
   }
 });
 
-/** Create Razorpay order for host create fee; event created only after confirm. */
+/** Create Razorpay order for host create fee; event created only after confirm.
+ *  Guard: requireVerified runs first — never create a Razorpay order for unverified users.
+ */
 router.post('/create-order', requireAuth, requireVerified, async (req, res) => {
   try {
     const parsed = validateEventPayload(req.body);
@@ -353,6 +355,7 @@ router.post('/confirm-create', requireAuth, requireVerified, async (req, res) =>
   }
 });
 
+/** Join order — requireVerified first so unverified users never hit Razorpay. */
 router.post('/:id/join-order', requireAuth, requireVerified, async (req, res) => {
   try {
     const { data: event, error } = await supabase

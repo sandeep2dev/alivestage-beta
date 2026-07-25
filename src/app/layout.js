@@ -16,7 +16,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = {
-  title: 'AliVeStage — Community Jamming',
+  title: 'Alivestage — Community Jamming',
   description: 'Host and join local jams. Discord-verified community.',
   manifest: '/site.webmanifest',
   icons: {

@@ -61,9 +61,11 @@ async function optionalAuth(req, _res, next) {
 
 function requireVerified(req, res, next) {
   if (!req.profile?.verified_at) {
+    const { inviteUrl } = require('../services/discord');
     return res.status(403).json({
-      message: 'Discord verification required before creating or joining events',
+      message: 'Verify via Discord to continue with payment',
       code: 'DISCORD_REQUIRED',
+      inviteUrl: inviteUrl(),
     });
   }
   next();

@@ -1,4 +1,4 @@
-# Cursor Prompt: AliVeStage Community — Event Hosting & Jamming Flow
+# Cursor Prompt: Alivestage Community — Event Hosting & Jamming Flow
 
 Stack: Next.js + Node + Supabase (Postgres), Razorpay for payments, Discord bot (discord.js) for identity verification.
 
@@ -48,7 +48,7 @@ This is a portfolio backend project — a community jamming platform, not a comm
 ## Discord OTP Verification Flow
 
 1. User signs up with email (unverified) + Discord username.
-2. Bot DMs a 6-digit OTP to that Discord user (requires user to have joined the AliVeStage Discord server first — surface this as an onboarding step: "join our server, then verify").
+2. Bot DMs a 6-digit OTP to that Discord user (requires user to have joined the Alivestage Discord server first — surface this as an onboarding step: "join our server, then verify").
 3. OTP stored hashed, 5-minute expiry, max 5 attempts, 60-second resend cooldown.
 4. User pastes OTP into onboarding form → backend validates → `verified_at` set, `discord_id` locked to account.
 5. Unverified users cannot create or join events.

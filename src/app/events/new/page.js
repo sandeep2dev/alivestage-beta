@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import DiscordVerifyGate from '@/components/DiscordVerifyGate/DiscordVerifyGate';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
-import { apiFetch } from '@/lib/api';
+import { ApiError, apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { payAndConfirm } from '@/lib/payments';
 import styles from './new.module.css';
@@ -13,6 +14,10 @@ export default function NewEventPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [pendingPay, setPendingPay] = useState(false);
   const [form, setForm] = useState({
     title: '',
     summary: '',
@@ -23,40 +28,68 @@ export default function NewEventPage() {
     durationMinutes: 120,
   });
 
+  async function chargeCreate() {
+    const token = getAccessToken();
+    const order = await apiFetch('/api/events/create-order', {
+      method: 'POST',
+      token,
+      body: {
+        title: form.title,
+        summary: form.summary,
+        description: form.description,
+        city: form.city,
+        precise_address: form.preciseAddress,
+        start_at: new Date(form.startAt).toISOString(),
+        duration_minutes: Number(form.durationMinutes),
+      },
+    });
+
+    const result = await payAndConfirm({
+      order,
+      token,
+      confirmPath: '/api/events/confirm-create',
+    });
+
+    router.push(`/events/${result.event.id}`);
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setMessage('');
     try {
       const token = getAccessToken();
       if (!token) {
         router.push('/auth');
         return;
       }
+      await chargeCreate();
+    } catch (err) {
+      if (err instanceof ApiError && err.code === 'DISCORD_REQUIRED') {
+        setInviteUrl(err.inviteUrl || '');
+        setPendingPay(true);
+        setVerifyOpen(true);
+        setMessage('Verify via Discord, then we will continue to payment.');
+      } else {
+        setError(err.message || 'Failed to create event');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      const order = await apiFetch('/api/events/create-order', {
-        method: 'POST',
-        token,
-        body: {
-          title: form.title,
-          summary: form.summary,
-          description: form.description,
-          city: form.city,
-          precise_address: form.preciseAddress,
-          start_at: new Date(form.startAt).toISOString(),
-          duration_minutes: Number(form.durationMinutes),
-        },
-      });
-
-      const result = await payAndConfirm({
-        order,
-        token,
-        confirmPath: '/api/events/confirm-create',
-      });
-
-      router.push(`/events/${result.event.id}`);
+  async function onVerified() {
+    setVerifyOpen(false);
+    if (!pendingPay) return;
+    setLoading(true);
+    setError('');
+    setMessage('Verified — continuing to payment…');
+    try {
+      await chargeCreate();
     } catch (err) {
       setError(err.message || 'Failed to create event');
+      setPendingPay(false);
     } finally {
       setLoading(false);
     }
@@ -68,6 +101,7 @@ export default function NewEventPage() {
       <p className="pageSubtitle">₹200 create fee. Joiners pay ₹50 to unlock the precise address.</p>
 
       <FormAlert type="error">{error}</FormAlert>
+      <FormAlert type="success">{message}</FormAlert>
 
       <form className={`card ${styles.form}`} onSubmit={onSubmit} noValidate>
         <FormField id="title" label="Title" required>
@@ -141,6 +175,16 @@ export default function NewEventPage() {
           {loading ? 'Processing…' : 'Pay ₹200 & publish'}
         </button>
       </form>
+
+      <DiscordVerifyGate
+        open={verifyOpen}
+        inviteUrl={inviteUrl}
+        onVerified={onVerified}
+        onCancel={() => {
+          setVerifyOpen(false);
+          setPendingPay(false);
+        }}
+      />
     </div>
   );
 }

@@ -32,5 +32,5 @@ if (!process.env.JWT_SECRET) {
 }
 
 app.listen(PORT, () => {
-  console.log(`[server] AliVeStage community API listening on port ${PORT}`);
+  console.log(`[server] Alivestage community API listening on port ${PORT}`);
 });

@@ -77,7 +77,7 @@ async function resolveGuildMember(discordUsername) {
   if (!member) {
     return {
       ok: false,
-      message: `Could not find @${username} in the AliVeStage Discord server. Join first: ${inviteUrl()}`,
+      message: `Could not find @${username} in the Alivestage Discord server. Join first: ${inviteUrl()}`,
     };
   }
 
@@ -105,7 +105,7 @@ async function sendOtpDm({ discordUsername, code }) {
   if (!resolved.ok) return resolved;
 
   const content =
-    `Your AliVeStage verification code is **${code}**.\n` +
+    `Your Alivestage verification code is **${code}**.\n` +
     `It expires in 5 minutes. If you did not request this, ignore this message.`;
 
   await sendDirectMessage(resolved.discordId, content);

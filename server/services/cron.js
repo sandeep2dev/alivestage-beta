@@ -62,7 +62,7 @@ async function processRatingPrompts() {
         <h2>How was the jam?</h2>
         <p>Hi ${profile.name || 'there'},</p>
         <p>Please rate people you jammed with at <strong>${event.title}</strong>.</p>
-        <p>The rating window closes soon — open AliVeStage to submit your ratings.</p>
+        <p>The rating window closes soon — open Alivestage to submit your ratings.</p>
       `;
 
       if (profile.email) {
@@ -71,7 +71,7 @@ async function processRatingPrompts() {
       if (profile.discord_id) {
         await sendDirectMessage(
           profile.discord_id,
-          `AliVeStage: Rate your jam "${event.title}" before the window closes.`
+          `Alivestage: Rate your jam "${event.title}" before the window closes.`
         );
       }
     }

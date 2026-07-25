@@ -113,7 +113,7 @@ export default function AuthPage() {
       setAccessToken(data.accessToken);
       const profile = data.profile;
 
-      if (!profile?.onboarding_complete || !profile?.verified_at) {
+      if (!profile?.onboarding_complete) {
         router.push('/onboarding');
         return;
       }
