@@ -35,9 +35,17 @@
 .cardTop {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: var(--space-md);
   margin-bottom: var(--space-sm);
   font-size: var(--font-size-sm);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .status {
@@ -45,6 +53,18 @@
   letter-spacing: 0.04em;
   color: var(--color-secondary);
   font-weight: 600;
+}
+
+.joinedBadge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background: var(--status-confirmed-bg);
+  color: var(--status-confirmed);
 }
 
 .city {
