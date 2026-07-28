@@ -34,6 +34,16 @@ Portfolio community platform for hosting and joining local jams. Built with Next
 UPDATE profiles SET role = 'admin', onboarding_complete = true WHERE email = 'your@email.com';
 ```
 
+## Demo seed data
+
+Populate hosts, fans, and past/live/upcoming jams with joiners:
+
+```bash
+npm run seed:demo
+```
+
+Uses `@yopmail.com` addresses (see script output). Re-running clears previous seed events tagged `[seed-demo]` and recreates them. Sign in via `/auth` OTP; if SMTP is unset, the code is printed in the API console.
+
 ## Scripts
 
 | Command | Purpose |
