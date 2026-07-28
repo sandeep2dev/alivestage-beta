@@ -132,7 +132,7 @@ export default function EventDetailPage() {
 
   const isHost = event.is_host;
   const isMember = event.is_member;
-  const open = ['created', 'live'].includes(event.status);
+  const open = ['created', 'live'].includes(event.status) && !event.has_ended;
 
   return (
     <div className={`container ${styles.page}`}>
@@ -141,7 +141,7 @@ export default function EventDetailPage() {
 
       <header className={styles.header}>
         <p className={styles.eyebrow}>
-          {event.status} · {event.city}
+          {event.display_status || event.status} · {event.city}
         </p>
         <h1 className="pageTitle">{event.title}</h1>
         <p className={styles.summary}>{event.summary}</p>
@@ -219,23 +219,7 @@ export default function EventDetailPage() {
             </button>
           </>
         )}
-        {isHost && event.status === 'created' && (
-          <button
-            type="button"
-            className="btn btnPrimary"
-            disabled={busy}
-            onClick={() =>
-              runAction(async () => {
-                const token = getAccessToken();
-                await apiFetch(`/api/events/${id}/go-live`, { method: 'POST', token });
-                setMessage('Event is live.');
-              })
-            }
-          >
-            Mark live
-          </button>
-        )}
-        {isHost && event.status === 'created' && members.filter((m) => !m.cancelled_at).length === 0 && (
+        {isHost && event.status === 'created' && !event.has_started && members.filter((m) => !m.cancelled_at).length === 0 && (
           <Link href={`/events/${id}/edit`} className="btn btnSecondary">
             Edit details
           </Link>

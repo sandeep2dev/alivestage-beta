@@ -4,10 +4,42 @@
  */
 const { REPUTATION_DISPLAY_THRESHOLD } = require('../config/community');
 
+function eventHasEnded(event) {
+  if (!event?.end_at) return false;
+  return new Date(event.end_at).getTime() < Date.now();
+}
+
+function eventHasStarted(event) {
+  if (!event?.start_at) return false;
+  return new Date(event.start_at).getTime() <= Date.now();
+}
+
+/**
+ * User-facing status label (DB status stays created|live|completed|cancelled).
+ * Time-based (does not require host go-live / complete):
+ * - before start_at → Upcoming
+ * - start_at..end_at → Live
+ * - after end_at → Past (joiners / public) or Ended (host, until marked completed)
+ * - completed → Past, cancelled → Cancelled
+ */
+function displayStatus(event, { isMember = false, isHost = false } = {}) {
+  if (!event) return null;
+  if (event.status === 'cancelled') return 'Cancelled';
+  if (event.status === 'completed') return 'Past';
+
+  const ended = eventHasEnded(event);
+  if (ended && isMember && !isHost) return 'Past';
+  if (ended && isHost) return 'Ended';
+  if (ended) return 'Past';
+
+  if (eventHasStarted(event) || event.status === 'live') return 'Live';
+  return 'Upcoming';
+}
+
 function serializeEvent(event, { viewerId = null, isMember = false, hostProfile = null } = {}) {
   if (!event) return null;
 
-  const isHost = viewerId && event.host_id === viewerId;
+  const isHost = Boolean(viewerId && event.host_id === viewerId);
   const canSeeAddress = Boolean(isHost || isMember);
 
   const host = hostProfile
@@ -32,11 +64,14 @@ function serializeEvent(event, { viewerId = null, isMember = false, hostProfile 
     end_at: event.end_at,
     visibility: event.visibility,
     status: event.status,
+    display_status: displayStatus(event, { isMember, isHost }),
+    has_started: eventHasStarted(event),
+    has_ended: eventHasEnded(event),
     completed_at: event.completed_at || null,
     rating_window_closes_at: event.rating_window_closes_at || null,
     created_at: event.created_at,
     host,
-    is_host: Boolean(isHost),
+    is_host: isHost,
     is_member: Boolean(isMember),
   };
 
@@ -59,4 +94,10 @@ function publicReputation(profile) {
   };
 }
 
-module.exports = { serializeEvent, publicReputation };
+module.exports = {
+  serializeEvent,
+  publicReputation,
+  displayStatus,
+  eventHasEnded,
+  eventHasStarted,
+};

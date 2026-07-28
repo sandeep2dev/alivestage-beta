@@ -102,6 +102,7 @@ router.get('/feed', optionalAuth, async (req, res) => {
       .from('events')
       .select('*')
       .in('status', ['created', 'live'])
+      .gt('end_at', new Date().toISOString())
       .order('start_at', { ascending: true });
     if (error) throw error;
 
@@ -317,6 +318,9 @@ router.post('/:id/join-order', requireAuth, async (req, res) => {
     if (!event) return res.status(404).json({ message: 'Event not found' });
     if (!['created', 'live'].includes(event.status)) {
       return res.status(400).json({ message: 'Event is not open for joining' });
+    }
+    if (new Date(event.end_at).getTime() < Date.now()) {
+      return res.status(400).json({ message: 'This jam has already ended' });
     }
     if (event.host_id === req.profile.id) {
       return res.status(400).json({ message: 'Hosts cannot join their own event' });

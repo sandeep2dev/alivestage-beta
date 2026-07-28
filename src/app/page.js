@@ -70,7 +70,7 @@ export default function HomePage() {
             <li key={event.id}>
               <Link href={`/events/${event.id}`} className={styles.card}>
                 <div className={styles.cardTop}>
-                  <span className={styles.status}>{event.status}</span>
+                  <span className={styles.status}>{event.display_status || event.status}</span>
                   <span className={styles.city}>{event.city}</span>
                 </div>
                 <h2 className={styles.title}>{event.title}</h2>

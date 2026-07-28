@@ -38,7 +38,7 @@ function EventList({ title, events }) {
         {events.map((event) => (
           <li key={event.id}>
             <Link href={`/events/${event.id}`} className={styles.card}>
-              <span className={styles.status}>{event.status}</span>
+              <span className={styles.status}>{event.display_status || event.status}</span>
               <strong>{event.title}</strong>
               <span className={styles.meta}>
                 {event.city} · {formatWhen(event.start_at)}

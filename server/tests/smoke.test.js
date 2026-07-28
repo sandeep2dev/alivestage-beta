@@ -84,6 +84,7 @@ describe('eventSerializer address ACL', () => {
     assert.equal(serialized.city, 'Pune');
     assert.equal(serialized.is_member, false);
     assert.equal(serialized.is_host, false);
+    assert.equal(serialized.display_status, 'Upcoming');
   });
 
   it('includes precise_address for paid members', () => {
@@ -94,6 +95,7 @@ describe('eventSerializer address ACL', () => {
     });
     assert.equal(serialized.precise_address, '12 MG Road, Pune');
     assert.equal(serialized.is_member, true);
+    assert.equal(serialized.display_status, 'Upcoming');
   });
 
   it('includes precise_address for the host', () => {
@@ -106,6 +108,48 @@ describe('eventSerializer address ACL', () => {
     assert.equal(serialized.is_host, true);
     assert.equal(serialized.host.reputation.enough, true);
     assert.equal(serialized.host.reputation.display, 4.5);
+  });
+
+  it('shows Live after start_at even if still created', () => {
+    const started = {
+      ...baseEvent,
+      start_at: '2020-01-01T18:00:00.000Z',
+      end_at: '2099-01-01T20:00:00.000Z',
+      status: 'created',
+    };
+    const serialized = serializeEvent(started, {
+      viewerId: 'joiner-1',
+      isMember: true,
+      hostProfile,
+    });
+    assert.equal(serialized.display_status, 'Live');
+    assert.equal(serialized.has_started, true);
+    assert.equal(serialized.has_ended, false);
+    assert.equal(serialized.status, 'created');
+  });
+
+  it('shows Past for joiners after end_at even if still created', () => {
+    const pastEvent = {
+      ...baseEvent,
+      start_at: '2020-01-01T18:00:00.000Z',
+      end_at: '2020-01-01T20:00:00.000Z',
+      status: 'created',
+    };
+    const asJoiner = serializeEvent(pastEvent, {
+      viewerId: 'joiner-1',
+      isMember: true,
+      hostProfile,
+    });
+    assert.equal(asJoiner.display_status, 'Past');
+    assert.equal(asJoiner.has_ended, true);
+    assert.equal(asJoiner.status, 'created');
+
+    const asHost = serializeEvent(pastEvent, {
+      viewerId: 'host-1',
+      isMember: false,
+      hostProfile,
+    });
+    assert.equal(asHost.display_status, 'Ended');
   });
 
   it('returns null for missing event', () => {
