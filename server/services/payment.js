@@ -1,11 +1,54 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
-function getClient() {
-  const key_id = process.env.RAZORPAY_KEY_ID;
-  const key_secret = process.env.RAZORPAY_KEY_SECRET;
+function isLocalhostApp() {
+  const raw = process.env.NEXT_PUBLIC_APP_URL || '';
+  try {
+    const host = new URL(raw).hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return /localhost|127\.0\.0\.1/.test(String(raw));
+  }
+}
+
+/**
+ * Localhost → test keys only (rzp_test_*). Production → live keys when set.
+ * Falls back to RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET for either mode.
+ */
+function resolveCredentials() {
+  const local = isLocalhostApp();
+  const testId = process.env.RAZORPAY_TEST_KEY_ID || null;
+  const testSecret = process.env.RAZORPAY_TEST_KEY_SECRET || null;
+  const liveId = process.env.RAZORPAY_LIVE_KEY_ID || null;
+  const liveSecret = process.env.RAZORPAY_LIVE_KEY_SECRET || null;
+  const fallbackId = process.env.RAZORPAY_KEY_ID || null;
+  const fallbackSecret = process.env.RAZORPAY_KEY_SECRET || null;
+
+  let key_id;
+  let key_secret;
+
+  if (local) {
+    key_id = testId || fallbackId;
+    key_secret = testSecret || fallbackSecret;
+    if (key_id && !String(key_id).startsWith('rzp_test_')) {
+      console.warn(
+        '[razorpay] NEXT_PUBLIC_APP_URL is localhost but key is not rzp_test_* — refusing live keys; using mock mode'
+      );
+      return null;
+    }
+  } else {
+    key_id = liveId || fallbackId;
+    key_secret = liveSecret || fallbackSecret;
+  }
+
   if (!key_id || !key_secret) return null;
-  return new Razorpay({ key_id, key_secret });
+  return { key_id, key_secret, mode: String(key_id).startsWith('rzp_test_') ? 'test' : 'live' };
+}
+
+function getClient() {
+  const creds = resolveCredentials();
+  if (!creds) return null;
+  return new Razorpay({ key_id: creds.key_id, key_secret: creds.key_secret });
 }
 
 function amountToPaise(amountInr) {
@@ -35,13 +78,13 @@ async function createOrder({ amount, receipt, notes }) {
 }
 
 function verifyPaymentSignature(orderId, paymentId, signature) {
-  const secret = process.env.RAZORPAY_KEY_SECRET;
-  if (!secret) {
+  const creds = resolveCredentials();
+  if (!creds) {
     // Dev/mock mode without Razorpay secrets
     return Boolean(orderId && paymentId);
   }
   const body = `${orderId}|${paymentId}`;
-  const expected = crypto.createHmac('sha256', secret).update(body).digest('hex');
+  const expected = crypto.createHmac('sha256', creds.key_secret).update(body).digest('hex');
   return expected === signature;
 }
 
@@ -51,7 +94,7 @@ function verifyPaymentSignature(orderId, paymentId, signature) {
  * @param {string} signature - x-razorpay-signature header
  */
 function verifyWebhookSignature(rawBody, signature) {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || resolveCredentials()?.key_secret;
   if (!secret) {
     // Dev mode: accept when no secret configured
     return Boolean(rawBody);
@@ -82,7 +125,15 @@ async function refundPayment(paymentId, amountInr) {
 }
 
 function publicKey() {
-  return process.env.RAZORPAY_KEY_ID || 'mock_key';
+  return resolveCredentials()?.key_id || 'mock_key';
+}
+
+function razorpayStatus() {
+  const creds = resolveCredentials();
+  if (!creds) {
+    return { configured: false, mode: 'mock', local: isLocalhostApp() };
+  }
+  return { configured: true, mode: creds.mode, local: isLocalhostApp() };
 }
 
 module.exports = {
@@ -93,4 +144,6 @@ module.exports = {
   verifyWebhookSignature,
   refundPayment,
   publicKey,
+  razorpayStatus,
+  isLocalhostApp,
 };

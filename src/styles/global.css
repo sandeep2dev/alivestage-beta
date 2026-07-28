@@ -100,6 +100,15 @@ body {
   overflow-x: clip;
 }
 
+/* Razorpay Checkout inherits color-scheme:dark and paints an opaque white
+   iframe backdrop. Force light so the modal keeps a translucent overlay. */
+.razorpay-container,
+.razorpay-container *,
+iframe.razorpay-checkout-frame,
+iframe[src*='razorpay'] {
+  color-scheme: light !important;
+}
+
 body {
   font-family: var(--font-body), Inter, sans-serif;
   font-size: var(--font-size-base);

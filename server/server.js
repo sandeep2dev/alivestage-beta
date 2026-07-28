@@ -1,5 +1,7 @@
-require('dotenv').config({ path: '.env.local' });
-require('dotenv').config();
+const path = require('path');
+const rootEnv = path.join(__dirname, '..');
+require('dotenv').config({ path: path.join(rootEnv, '.env.local') });
+require('dotenv').config({ path: path.join(rootEnv, '.env') });
 
 const express = require('express');
 const cors = require('cors');
@@ -12,6 +14,8 @@ const { registerCronJobs } = require('./services/cron');
 const app = express();
 const PORT = process.env.PORT || 5001;
 const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const { razorpayStatus } = require('./services/payment');
+const rpStatus = razorpayStatus();
 
 app.use(cors({ origin: allowedOrigin, credentials: true }));
 
@@ -41,6 +45,20 @@ if (!process.env.JWT_SECRET) {
   console.warn('[server] JWT_SECRET is not set — OTP login will fail until it is configured');
 }
 
+if (!rpStatus.configured) {
+  console.warn(
+    '[server] Razorpay keys missing — join/create fees run in MOCK mode (no checkout modal). Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in .env.local and restart the API.'
+  );
+}
+
 app.listen(PORT, () => {
   console.log(`[server] Alivestage community API listening on port ${PORT}`);
+  if (!rpStatus.configured) {
+    console.log('[server] Razorpay: MOCK (skips payment modal)');
+  } else {
+    console.log(
+      `[server] Razorpay: ${rpStatus.mode} mode Standard Checkout` +
+        (rpStatus.local ? ' (NEXT_PUBLIC_APP_URL is localhost → test keys required)' : '')
+    );
+  }
 });

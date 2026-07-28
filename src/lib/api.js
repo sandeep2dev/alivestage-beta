@@ -64,6 +64,9 @@ export async function openRazorpayCheckout({ key, orderId, amount, name, email, 
       modal: { ondismiss: () => reject(new Error('Payment cancelled')) },
     };
     const rzp = new Razorpay(options);
+    rzp.on('payment.failed', (response) => {
+      reject(new Error(response?.error?.description || 'Payment failed'));
+    });
     rzp.open();
   });
 }

@@ -6,7 +6,9 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
 
-// Isolate env for payment module
+// Isolate env for payment module (localhost → test keys)
+process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+process.env.RAZORPAY_KEY_ID = 'rzp_test_smoke';
 process.env.RAZORPAY_KEY_SECRET = 'test_secret_key';
 process.env.RAZORPAY_WEBHOOK_SECRET = 'whsec_test';
 
