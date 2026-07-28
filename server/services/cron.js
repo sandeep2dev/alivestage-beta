@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { supabase } = require('../config/supabase');
 const { sendMail } = require('./email');
+const { appUrl } = require('./cancelEvent');
 const { RATING_GRACE_HOURS } = require('../config/community');
 
 /**
@@ -50,6 +51,7 @@ async function processRatingPrompts() {
 
     const recipients = [...(memberships || []).map((m) => m.profile), host].filter(Boolean);
     const seen = new Set();
+    const rateUrl = `${appUrl()}/events/${event.id}/rate`;
 
     for (const profile of recipients) {
       if (!profile?.id || seen.has(profile.id)) continue;
@@ -64,7 +66,8 @@ async function processRatingPrompts() {
           <h2>How was the jam?</h2>
           <p>Hi ${profile.name || 'there'},</p>
           <p>Please rate people you jammed with at <strong>${event.title}</strong>.</p>
-          <p>The rating window closes soon — open Alivestage to submit your ratings.</p>
+          <p><a href="${rateUrl}">Open rating page</a></p>
+          <p>The rating window closes soon.</p>
         `,
       });
     }

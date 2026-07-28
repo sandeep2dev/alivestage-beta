@@ -45,6 +45,29 @@ function verifyPaymentSignature(orderId, paymentId, signature) {
   return expected === signature;
 }
 
+/**
+ * Verify Razorpay webhook signature (HMAC-SHA256 of raw body).
+ * @param {Buffer|string} rawBody
+ * @param {string} signature - x-razorpay-signature header
+ */
+function verifyWebhookSignature(rawBody, signature) {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET;
+  if (!secret) {
+    // Dev mode: accept when no secret configured
+    return Boolean(rawBody);
+  }
+  if (!signature) return false;
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(rawBody)
+    .digest('hex');
+  try {
+    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(signature)));
+  } catch {
+    return false;
+  }
+}
+
 async function refundPayment(paymentId, amountInr) {
   const rp = getClient();
   if (!rp || !paymentId || String(paymentId).startsWith('mock_pay_')) {
@@ -67,6 +90,7 @@ module.exports = {
   amountToPaise,
   createOrder,
   verifyPaymentSignature,
+  verifyWebhookSignature,
   refundPayment,
   publicKey,
 };

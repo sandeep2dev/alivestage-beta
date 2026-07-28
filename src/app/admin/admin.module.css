@@ -35,3 +35,29 @@
   color: var(--color-text-muted);
   font-weight: 600;
 }
+
+.linkBtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--color-accent, #7dd3fc);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.linkBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.banned {
+  color: #f87171;
+  font-size: var(--font-size-sm);
+}

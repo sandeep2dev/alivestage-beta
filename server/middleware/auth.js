@@ -30,6 +30,10 @@ async function requireAuth(req, res, next) {
     return res.status(401).json({ message: 'Profile not found' });
   }
 
+  if (profile.banned_at) {
+    return res.status(403).json({ message: 'Account suspended', code: 'BANNED' });
+  }
+
   req.user = { id: profile.id, email: profile.email };
   req.profile = profile;
   next();

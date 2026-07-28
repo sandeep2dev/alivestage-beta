@@ -1,12 +1,10 @@
 const crypto = require('crypto');
+const { supabase } = require('../config/supabase');
 
 const DEFAULT_TTL_MS = 10 * 60 * 1000;
 const OTP_LENGTH = 6;
 const MAX_ATTEMPTS = 5;
 const DEFAULT_COOLDOWN_MS = 45 * 1000;
-
-/** @type {Map<string, { hash: string, expiresAt: number, attempts: number, sentAt: number }>} */
-const store = new Map();
 
 function normalizeKey(key) {
   return String(key || '').trim().toLowerCase();
@@ -26,11 +24,11 @@ function hashCode(key, code) {
 }
 
 /**
- * Create or replace an OTP for a key.
+ * Create or replace an OTP for a key (persisted in Supabase).
  * @param {string} key
  * @param {{ enforceCooldown?: boolean, ttlMs?: number, cooldownMs?: number }} [opts]
  */
-function createOtp(key, {
+async function createOtp(key, {
   enforceCooldown = false,
   ttlMs = DEFAULT_TTL_MS,
   cooldownMs = DEFAULT_COOLDOWN_MS,
@@ -40,48 +38,75 @@ function createOtp(key, {
     return { ok: false, message: 'Invalid OTP key' };
   }
 
-  const existing = store.get(storeKey);
-  if (enforceCooldown && existing?.sentAt) {
-    const elapsed = Date.now() - existing.sentAt;
-    if (elapsed < cooldownMs) {
-      const retryAfterSec = Math.ceil((cooldownMs - elapsed) / 1000);
-      return {
-        ok: false,
-        message: `Please wait ${retryAfterSec}s before requesting a new code`,
-        retryAfterSec,
-      };
+  if (enforceCooldown) {
+    const { data: existing } = await supabase
+      .from('otp_challenges')
+      .select('sent_at')
+      .eq('key', storeKey)
+      .maybeSingle();
+
+    if (existing?.sent_at) {
+      const elapsed = Date.now() - new Date(existing.sent_at).getTime();
+      if (elapsed < cooldownMs) {
+        const retryAfterSec = Math.ceil((cooldownMs - elapsed) / 1000);
+        return {
+          ok: false,
+          message: `Please wait ${retryAfterSec}s before requesting a new code`,
+          retryAfterSec,
+        };
+      }
     }
   }
 
   const code = generateCode();
-  store.set(storeKey, {
-    hash: hashCode(storeKey, code),
-    expiresAt: Date.now() + ttlMs,
-    attempts: 0,
-    sentAt: Date.now(),
-  });
+  const now = new Date();
+  const { error } = await supabase.from('otp_challenges').upsert(
+    {
+      key: storeKey,
+      hash: hashCode(storeKey, code),
+      expires_at: new Date(now.getTime() + ttlMs).toISOString(),
+      attempts: 0,
+      sent_at: now.toISOString(),
+    },
+    { onConflict: 'key' }
+  );
+  if (error) throw error;
+
   return { ok: true, code };
 }
 
-function verifyOtp(key, code) {
+async function verifyOtp(key, code) {
   const storeKey = normalizeKey(key);
-  const entry = store.get(storeKey);
+  const { data: entry, error } = await supabase
+    .from('otp_challenges')
+    .select('*')
+    .eq('key', storeKey)
+    .maybeSingle();
+  if (error) throw error;
+
   if (!entry) {
     return { ok: false, message: 'No OTP found. Please request a new code.' };
   }
-  if (Date.now() > entry.expiresAt) {
-    store.delete(storeKey);
+  if (Date.now() > new Date(entry.expires_at).getTime()) {
+    await supabase.from('otp_challenges').delete().eq('key', storeKey);
     return { ok: false, message: 'OTP expired. Please request a new code.' };
   }
-  entry.attempts += 1;
-  if (entry.attempts > MAX_ATTEMPTS) {
-    store.delete(storeKey);
+
+  const attempts = Number(entry.attempts || 0) + 1;
+  if (attempts > MAX_ATTEMPTS) {
+    await supabase.from('otp_challenges').delete().eq('key', storeKey);
     return { ok: false, message: 'Too many attempts. Please request a new code.' };
   }
+
   if (entry.hash !== hashCode(storeKey, String(code || '').trim())) {
+    await supabase
+      .from('otp_challenges')
+      .update({ attempts })
+      .eq('key', storeKey);
     return { ok: false, message: 'Invalid OTP code.' };
   }
-  store.delete(storeKey);
+
+  await supabase.from('otp_challenges').delete().eq('key', storeKey);
   return { ok: true };
 }
 

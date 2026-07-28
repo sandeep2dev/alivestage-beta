@@ -1,2 +1,0 @@
-# for now remove whatsapp otp verification just input the number it is fine
-comment the code so that we can use it later, now we need to add a line below the whatsapp number field->please make sure this is whatsapp number as we will use it for real time communication

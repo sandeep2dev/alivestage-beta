@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken, setAccessToken } from '@/lib/auth';
 import { lengthBetween } from '@/lib/validators';
+import { imageToUploadPayload } from '@/lib/image';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
+import FileUpload from '@/components/FileUpload/FileUpload';
+import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
 import styles from './profile.module.css';
 
@@ -21,6 +24,8 @@ export default function ProfilePage() {
   const [message, setMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarFileName, setAvatarFileName] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -42,6 +47,31 @@ export default function ProfilePage() {
     }
     load();
   }, [router]);
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError('');
+    setMessage('');
+    setAvatarBusy(true);
+    setAvatarFileName(file.name);
+    try {
+      const payload = await imageToUploadPayload(file);
+      const token = getAccessToken();
+      const data = await apiFetch('/api/auth/avatar', {
+        method: 'POST',
+        token,
+        body: payload,
+      });
+      if (data.accessToken) setAccessToken(data.accessToken);
+      setProfile(data.profile);
+      setMessage('Photo updated.');
+    } catch (err) {
+      setError(err.message || 'Failed to upload photo');
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -110,12 +140,24 @@ export default function ProfilePage() {
       <FormAlert type="error">{error}</FormAlert>
       <FormAlert type="success">{message}</FormAlert>
 
+      <div className={`card ${styles.avatarCard}`}>
+        <FileUpload
+          id="avatar"
+          label={avatarBusy ? 'Uploading…' : 'Upload photo'}
+          hint="JPEG, PNG, or WebP — max ~5MB"
+          fileName={avatarFileName}
+          previewSrc={profile.avatar_url || ''}
+          previewAlt={profile.name || 'Avatar'}
+          onChange={handleAvatarChange}
+        />
+      </div>
+
       <form className={`card ${styles.form}`} onSubmit={handleSubmit} noValidate>
         <FormField id="name" label="Display name" required error={fieldErrors.name}>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
         </FormField>
         <FormField id="city" label="City" required error={fieldErrors.city}>
-          <input className="input" value={city} onChange={(e) => setCity(e.target.value)} />
+          <CityAutocomplete id="city" value={city} onChange={setCity} required />
         </FormField>
         <FormField id="pincode" label="Pincode" required error={fieldErrors.pincode}>
           <input
@@ -125,7 +167,7 @@ export default function ProfilePage() {
             inputMode="numeric"
           />
         </FormField>
-        <FormField id="email" label="Email" hint="Entry field only — not verified">
+        <FormField id="email" label="Email" hint="Verified via email OTP at sign-in">
           <input className="input" value={profile.email || ''} disabled />
         </FormField>
         <button type="submit" className="btn btnPrimary" disabled={loading}>

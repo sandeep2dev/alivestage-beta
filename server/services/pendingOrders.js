@@ -1,39 +1,46 @@
-/** Short-lived Razorpay order → event/join drafts (no pending DB rows). */
+/** Short-lived Razorpay order → event/join drafts (persisted in Supabase). */
+const { supabase } = require('../config/supabase');
+
 const TTL_MS = 30 * 60 * 1000;
 
-/** @type {Map<string, { payload: object, expiresAt: number }>} */
-const store = new Map();
-
-function prune() {
-  const now = Date.now();
-  for (const [key, value] of store.entries()) {
-    if (value.expiresAt <= now) store.delete(key);
-  }
+async function saveDraft(orderId, payload) {
+  const id = String(orderId);
+  const { error } = await supabase.from('pending_orders').upsert(
+    {
+      order_id: id,
+      payload,
+      expires_at: new Date(Date.now() + TTL_MS).toISOString(),
+    },
+    { onConflict: 'order_id' }
+  );
+  if (error) throw error;
 }
 
-function saveDraft(orderId, payload) {
-  prune();
-  store.set(String(orderId), {
-    payload,
-    expiresAt: Date.now() + TTL_MS,
-  });
-}
+async function peekDraft(orderId) {
+  const id = String(orderId || '');
+  if (!id) return null;
 
-function peekDraft(orderId) {
-  prune();
-  const entry = store.get(String(orderId));
-  if (!entry) return null;
-  if (entry.expiresAt <= Date.now()) {
-    store.delete(String(orderId));
+  const { data, error } = await supabase
+    .from('pending_orders')
+    .select('payload, expires_at')
+    .eq('order_id', id)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  if (new Date(data.expires_at).getTime() <= Date.now()) {
+    await supabase.from('pending_orders').delete().eq('order_id', id);
     return null;
   }
-  return entry.payload;
+  return data.payload;
 }
 
-function takeDraft(orderId) {
-  const payload = peekDraft(orderId);
-  if (payload) store.delete(String(orderId));
+async function takeDraft(orderId) {
+  const payload = await peekDraft(orderId);
+  if (payload) {
+    await supabase.from('pending_orders').delete().eq('order_id', String(orderId));
+  }
   return payload;
 }
 
-module.exports = { saveDraft, peekDraft, takeDraft };
+module.exports = { saveDraft, peekDraft, takeDraft, TTL_MS };

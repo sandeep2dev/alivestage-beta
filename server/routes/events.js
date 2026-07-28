@@ -6,9 +6,10 @@ const {
   refundPayment,
   publicKey,
 } = require('../services/payment');
-const { saveDraft, takeDraft, peekDraft } = require('../services/pendingOrders');
+const { saveDraft } = require('../services/pendingOrders');
+const { fulfillHostCreate, fulfillJoin } = require('../services/fulfillPayment');
+const { cancelEvent } = require('../services/cancelEvent');
 const { serializeEvent } = require('../services/eventSerializer');
-const { sendMail } = require('../services/email');
 const {
   HOST_CREATE_FEE,
   JOIN_FEE,
@@ -22,7 +23,7 @@ function computeEndAt(startAt, durationMinutes) {
   return new Date(new Date(startAt).getTime() + Number(durationMinutes) * 60 * 1000);
 }
 
-function validateEventPayload(body) {
+function validateEventPayload(body, { allowPastStart = false } = {}) {
   const title = String(body?.title || '').trim();
   const summary = String(body?.summary || '').trim();
   const description = String(body?.description || '').trim();
@@ -52,7 +53,7 @@ function validateEventPayload(body) {
   if (!Number.isFinite(durationMinutes) || durationMinutes < 30 || durationMinutes > 24 * 60) {
     return { ok: false, message: 'Duration must be between 30 and 1440 minutes' };
   }
-  if (new Date(startAt).getTime() < Date.now() - 60 * 1000) {
+  if (!allowPastStart && new Date(startAt).getTime() < Date.now() - 60 * 1000) {
     return { ok: false, message: 'Start time must be in the future' };
   }
 
@@ -90,24 +91,6 @@ async function loadHost(hostId) {
     .eq('id', hostId)
     .maybeSingle();
   return data;
-}
-
-async function notifyJoinersCancelled(event, joiners) {
-  for (const row of joiners || []) {
-    const profile = row.profile || row;
-    if (profile?.email) {
-      await sendMail({
-        to: profile.email,
-        subject: `Jam cancelled: ${event.title}`,
-        html: `
-          <h2>Event cancelled</h2>
-          <p>Hi ${profile.name || 'there'},</p>
-          <p>The host cancelled <strong>${event.title}</strong> in ${event.city}.</p>
-          <p>Your ₹${JOIN_FEE} join fee has been fully refunded.</p>
-        `,
-      });
-    }
-  }
 }
 
 /** Home feed: created|live, city match first, then start_at asc */
@@ -272,7 +255,7 @@ router.post('/create-order', requireAuth, async (req, res) => {
       notes: { type: 'host_create_fee', user_id: req.profile.id },
     });
 
-    saveDraft(order.id, {
+    await saveDraft(order.id, {
       kind: 'host_create',
       userId: req.profile.id,
       amount: HOST_CREATE_FEE,
@@ -299,47 +282,24 @@ router.post('/confirm-create', requireAuth, async (req, res) => {
     const paymentId = req.body?.razorpay_payment_id || req.body?.paymentId || `mock_pay_${Date.now()}`;
     const signature = req.body?.razorpay_signature || req.body?.signature || '';
 
-    const draft = peekDraft(orderId);
-    if (!draft || draft.kind !== 'host_create' || draft.userId !== req.profile.id) {
-      return res.status(400).json({ message: 'No pending create order found' });
+    if (!orderId) {
+      return res.status(400).json({ message: 'Order id is required' });
     }
 
     if (!verifyPaymentSignature(orderId, paymentId, signature)) {
       return res.status(400).json({ message: 'Invalid payment signature' });
     }
 
-    takeDraft(orderId);
-
-    const { data: event, error: eventError } = await supabase
-      .from('events')
-      .insert({
-        host_id: req.profile.id,
-        ...draft.event,
-        visibility: 'public',
-        status: 'created',
-      })
-      .select('*')
-      .single();
-    if (eventError) throw eventError;
-
-    const { error: payError } = await supabase.from('payments').insert({
-      user_id: req.profile.id,
-      event_id: event.id,
-      type: 'host_create_fee',
-      status: 'paid',
-      amount: HOST_CREATE_FEE,
-      razorpay_order_id: orderId,
-      razorpay_payment_id: paymentId,
+    const result = await fulfillHostCreate({
+      orderId,
+      paymentId,
+      expectedUserId: req.profile.id,
     });
-    if (payError) throw payError;
+    if (result.ok === false) {
+      return res.status(400).json({ message: result.message });
+    }
 
-    res.json({
-      event: serializeEvent(event, {
-        viewerId: req.profile.id,
-        isMember: true,
-        hostProfile: req.profile,
-      }),
-    });
+    res.json({ event: result.event });
   } catch (err) {
     console.error('[events/confirm-create]', err);
     res.status(500).json({ message: err.message || 'Failed to confirm event create' });
@@ -377,7 +337,7 @@ router.post('/:id/join-order', requireAuth, async (req, res) => {
       },
     });
 
-    saveDraft(order.id, {
+    await saveDraft(order.id, {
       kind: 'join',
       userId: req.profile.id,
       eventId: event.id,
@@ -405,87 +365,27 @@ router.post('/:id/confirm-join', requireAuth, async (req, res) => {
     const paymentId = req.body?.razorpay_payment_id || req.body?.paymentId || `mock_pay_${Date.now()}`;
     const signature = req.body?.razorpay_signature || req.body?.signature || '';
 
-    const draft = peekDraft(orderId);
-    if (
-      !draft ||
-      draft.kind !== 'join' ||
-      draft.userId !== req.profile.id ||
-      draft.eventId !== eventId
-    ) {
-      return res.status(400).json({ message: 'No pending join order found' });
+    if (!orderId) {
+      return res.status(400).json({ message: 'Order id is required' });
     }
 
     if (!verifyPaymentSignature(orderId, paymentId, signature)) {
       return res.status(400).json({ message: 'Invalid payment signature' });
     }
 
-    const { data: event, error } = await supabase
-      .from('events')
-      .select('*')
-      .eq('id', eventId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!event || !['created', 'live'].includes(event.status)) {
-      return res.status(400).json({ message: 'Event is not open for joining' });
+    const result = await fulfillJoin({
+      orderId,
+      paymentId,
+      expectedUserId: req.profile.id,
+      expectedEventId: eventId,
+    });
+    if (result.ok === false) {
+      return res.status(400).json({ message: result.message });
     }
 
-    takeDraft(orderId);
-
-    const { data: payment, error: payError } = await supabase
-      .from('payments')
-      .insert({
-        user_id: req.profile.id,
-        event_id: eventId,
-        type: 'join_fee',
-        status: 'paid',
-        amount: JOIN_FEE,
-        razorpay_order_id: orderId,
-        razorpay_payment_id: paymentId,
-      })
-      .select('*')
-      .single();
-    if (payError) throw payError;
-
-    const { data: membership, error: memError } = await supabase
-      .from('event_memberships')
-      .upsert(
-        {
-          event_id: eventId,
-          user_id: req.profile.id,
-          payment_id: payment.id,
-          joined_at: new Date().toISOString(),
-          cancelled_at: null,
-          host_marked_attended: false,
-          self_marked_present: false,
-        },
-        { onConflict: 'event_id,user_id' }
-      )
-      .select('*')
-      .single();
-    if (memError) throw memError;
-
-    // Reactivate soft-deleted row if needed — upsert may not clear cancelled_at depending on PostgREST
-    if (membership.cancelled_at) {
-      await supabase
-        .from('event_memberships')
-        .update({
-          cancelled_at: null,
-          payment_id: payment.id,
-          joined_at: new Date().toISOString(),
-          host_marked_attended: false,
-          self_marked_present: false,
-        })
-        .eq('id', membership.id);
-    }
-
-    const host = await loadHost(event.host_id);
     res.json({
-      event: serializeEvent(event, {
-        viewerId: req.profile.id,
-        isMember: true,
-        hostProfile: host,
-      }),
-      membership,
+      event: result.event,
+      membership: result.membership,
     });
   } catch (err) {
     console.error('[events/confirm-join]', err);
@@ -493,7 +393,7 @@ router.post('/:id/confirm-join', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/:id/cancel', requireAuth, async (req, res) => {
+router.patch('/:id', requireAuth, async (req, res) => {
   try {
     const { data: event, error } = await supabase
       .from('events')
@@ -503,49 +403,45 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
     if (error) throw error;
     if (!event) return res.status(404).json({ message: 'Event not found' });
     if (event.host_id !== req.profile.id) {
-      return res.status(403).json({ message: 'Only the host can cancel this event' });
+      return res.status(403).json({ message: 'Only the host can edit this event' });
     }
-    if (['completed', 'cancelled'].includes(event.status)) {
-      return res.status(400).json({ message: `Event is already ${event.status}` });
+    if (event.status !== 'created') {
+      return res.status(400).json({ message: 'Only events in created status can be edited' });
     }
 
-    const { data: memberships } = await supabase
+    const { count } = await supabase
       .from('event_memberships')
-      .select(
-        '*, payment:payments(*), profile:profiles!event_memberships_user_id_fkey(id, email, name)'
-      )
+      .select('id', { count: 'exact', head: true })
       .eq('event_id', event.id)
       .is('cancelled_at', null);
 
-    for (const m of memberships || []) {
-      const payment = m.payment;
-      if (payment?.razorpay_payment_id && payment.status === 'paid') {
-        await refundPayment(payment.razorpay_payment_id, JOIN_FEE);
-        await supabase
-          .from('payments')
-          .update({
-            status: 'refunded_full',
-            refund_amount: JOIN_FEE,
-            refund_reason: 'host_cancelled',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', payment.id);
-      }
-      await supabase
-        .from('event_memberships')
-        .update({ cancelled_at: new Date().toISOString() })
-        .eq('id', m.id);
+    if ((count || 0) > 0) {
+      return res.status(400).json({
+        message: 'Cannot edit after someone has joined — cancel and recreate instead',
+      });
     }
+
+    const parsed = validateEventPayload(
+      {
+        title: req.body?.title ?? event.title,
+        summary: req.body?.summary ?? event.summary,
+        description: req.body?.description ?? event.description,
+        city: req.body?.city ?? event.city,
+        precise_address: req.body?.precise_address ?? req.body?.preciseAddress ?? event.precise_address,
+        start_at: req.body?.start_at ?? req.body?.startAt ?? event.start_at,
+        duration_minutes: req.body?.duration_minutes ?? req.body?.durationMinutes ?? event.duration_minutes,
+      },
+      { allowPastStart: false }
+    );
+    if (!parsed.ok) return res.status(400).json({ message: parsed.message });
 
     const { data: updated, error: updErr } = await supabase
       .from('events')
-      .update({ status: 'cancelled' })
+      .update(parsed.value)
       .eq('id', event.id)
       .select('*')
       .single();
     if (updErr) throw updErr;
-
-    await notifyJoinersCancelled(updated, memberships);
 
     res.json({
       event: serializeEvent(updated, {
@@ -554,6 +450,24 @@ router.post('/:id/cancel', requireAuth, async (req, res) => {
         hostProfile: req.profile,
       }),
     });
+  } catch (err) {
+    console.error('[events/patch]', err);
+    res.status(500).json({ message: err.message || 'Failed to update event' });
+  }
+});
+
+router.post('/:id/cancel', requireAuth, async (req, res) => {
+  try {
+    const result = await cancelEvent({
+      eventId: req.params.id,
+      actorId: req.profile.id,
+      asAdmin: false,
+      hostProfile: req.profile,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({ event: result.event });
   } catch (err) {
     console.error('[events/cancel]', err);
     res.status(500).json({ message: err.message || 'Failed to cancel event' });

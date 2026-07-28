@@ -23,7 +23,7 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ message: 'Valid email is required' });
     }
 
-    const created = createOtp(email);
+    const created = await createOtp(email, { enforceCooldown: true });
     if (!created.ok) {
       return res.status(429).json({ message: created.message, retryAfterSec: created.retryAfterSec });
     }
@@ -48,7 +48,7 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ message: 'Email and OTP are required' });
     }
 
-    const result = verifyOtp(email, code);
+    const result = await verifyOtp(email, code);
     if (!result.ok) {
       return res.status(400).json({ message: result.message });
     }
@@ -75,6 +75,10 @@ router.post('/verify-otp', async (req, res) => {
         .single();
       if (createError) throw createError;
       profile = created;
+    }
+
+    if (profile.banned_at) {
+      return res.status(403).json({ message: 'Account suspended', code: 'BANNED' });
     }
 
     const accessToken = signToken(profile);
@@ -203,6 +207,61 @@ router.get('/users/:id', async (req, res) => {
   } catch (err) {
     console.error('[auth/users/:id]', err);
     res.status(500).json({ message: err.message || 'Failed to load profile' });
+  }
+});
+
+/** Upload avatar (base64 JPEG/PNG/WebP) → Supabase Storage `avatars` bucket. */
+router.post('/avatar', requireAuth, async (req, res) => {
+  try {
+    const base64 = String(req.body?.base64 || '');
+    const contentType = String(req.body?.contentType || 'image/jpeg').toLowerCase();
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(contentType)) {
+      return res.status(400).json({ message: 'Unsupported image type' });
+    }
+
+    const match = base64.match(/^data:([^;]+);base64,(.+)$/);
+    const raw = match ? match[2] : base64.replace(/\s/g, '');
+    if (!raw || raw.length < 32) {
+      return res.status(400).json({ message: 'Image data is required' });
+    }
+
+    const buffer = Buffer.from(raw, 'base64');
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ message: 'Image must be under 5MB' });
+    }
+
+    const ext =
+      contentType === 'image/png'
+        ? 'png'
+        : contentType === 'image/webp'
+          ? 'webp'
+          : contentType === 'image/gif'
+            ? 'gif'
+            : 'jpg';
+    const path = `${req.profile.id}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, buffer, { contentType, upsert: true });
+    if (uploadError) throw uploadError;
+
+    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+    const avatarUrl = `${pub.publicUrl}?t=${Date.now()}`;
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: avatarUrl })
+      .eq('id', req.profile.id)
+      .select('*')
+      .single();
+    if (error) throw error;
+
+    const accessToken = signToken(profile);
+    res.json({ profile, accessToken, avatar_url: avatarUrl });
+  } catch (err) {
+    console.error('[auth/avatar]', err);
+    res.status(500).json({ message: err.message || 'Failed to upload avatar' });
   }
 });
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
+import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken, setAccessToken, clearAccessToken } from '@/lib/auth';
 import styles from './onboarding.module.css';
@@ -90,10 +91,10 @@ export default function OnboardingPage() {
             />
           </FormField>
           <FormField id="city" label="City" required>
-            <input
-              className="input"
+            <CityAutocomplete
+              id="city"
               value={form.city}
-              onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+              onChange={(city) => setForm((f) => ({ ...f, city }))}
               required
             />
           </FormField>

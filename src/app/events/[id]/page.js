@@ -235,6 +235,11 @@ export default function EventDetailPage() {
             Mark live
           </button>
         )}
+        {isHost && event.status === 'created' && members.filter((m) => !m.cancelled_at).length === 0 && (
+          <Link href={`/events/${id}/edit`} className="btn btnSecondary">
+            Edit details
+          </Link>
+        )}
         {isHost && ['created', 'live'].includes(event.status) && (
           <>
             <button

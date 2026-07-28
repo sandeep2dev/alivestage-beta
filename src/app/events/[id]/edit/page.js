@@ -1,18 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
 import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
-import { payAndConfirm } from '@/lib/payments';
-import styles from './new.module.css';
+import styles from '../new/new.module.css';
 
-export default function NewEventPage() {
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export default function EditEventPage() {
+  const { id } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     title: '',
@@ -24,19 +33,49 @@ export default function NewEventPage() {
     durationMinutes: 120,
   });
 
+  useEffect(() => {
+    async function load() {
+      const token = getAccessToken();
+      if (!token) {
+        router.replace('/auth');
+        return;
+      }
+      try {
+        const data = await apiFetch(`/api/events/${id}`, { token });
+        const event = data.event;
+        if (!event?.is_host) {
+          router.replace(`/events/${id}`);
+          return;
+        }
+        if (event.status !== 'created') {
+          setError('Only events in created status can be edited.');
+        }
+        setForm({
+          title: event.title || '',
+          summary: event.summary || '',
+          description: event.description || '',
+          city: event.city || '',
+          preciseAddress: event.precise_address || '',
+          startAt: toLocalInput(event.start_at),
+          durationMinutes: event.duration_minutes || 120,
+        });
+        setReady(true);
+      } catch (err) {
+        setError(err.message || 'Failed to load event');
+        setReady(true);
+      }
+    }
+    load();
+  }, [id, router]);
+
   async function onSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
       const token = getAccessToken();
-      if (!token) {
-        router.push('/auth');
-        return;
-      }
-
-      const order = await apiFetch('/api/events/create-order', {
-        method: 'POST',
+      await apiFetch(`/api/events/${id}`, {
+        method: 'PATCH',
         token,
         body: {
           title: form.title,
@@ -48,25 +87,26 @@ export default function NewEventPage() {
           duration_minutes: Number(form.durationMinutes),
         },
       });
-
-      const result = await payAndConfirm({
-        order,
-        token,
-        confirmPath: '/api/events/confirm-create',
-      });
-
-      router.push(`/events/${result.event.id}`);
+      router.push(`/events/${id}`);
     } catch (err) {
-      setError(err.message || 'Failed to create event');
+      setError(err.message || 'Failed to update event');
     } finally {
       setLoading(false);
     }
   }
 
+  if (!ready) {
+    return (
+      <div className={`container ${styles.page}`}>
+        <p>Loading…</p>
+      </div>
+    );
+  }
+
   return (
     <div className={`container ${styles.page}`}>
-      <h1 className="pageTitle">Host a jam</h1>
-      <p className="pageSubtitle">₹200 create fee. Joiners pay ₹50 to unlock the precise address.</p>
+      <h1 className="pageTitle">Edit jam</h1>
+      <p className="pageSubtitle">You can edit until someone joins or you mark the jam live.</p>
 
       <FormAlert type="error">{error}</FormAlert>
 
@@ -79,7 +119,7 @@ export default function NewEventPage() {
             required
           />
         </FormField>
-        <FormField id="summary" label="Summary" required hint="Shown on the public feed">
+        <FormField id="summary" label="Summary" required>
           <textarea
             className="input"
             rows={2}
@@ -104,12 +144,7 @@ export default function NewEventPage() {
             required
           />
         </FormField>
-        <FormField
-          id="address"
-          label="Precise address"
-          required
-          hint="Only visible to paid joiners and you"
-        >
+        <FormField id="address" label="Precise address" required>
           <textarea
             className="input"
             rows={2}
@@ -139,7 +174,7 @@ export default function NewEventPage() {
           />
         </FormField>
         <button type="submit" className="btn btnPrimary" disabled={loading}>
-          {loading ? 'Processing…' : 'Pay ₹200 & publish'}
+          {loading ? 'Saving…' : 'Save changes'}
         </button>
       </form>
     </div>

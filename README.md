@@ -17,26 +17,65 @@ Portfolio community platform for hosting and joining local jams. Built with Next
 ## Stack
 
 - Next.js (App Router) + Express API
-- Supabase Postgres + storage
-- Razorpay orders/refunds (no Route/escrow)
+- Supabase Postgres + storage (avatars)
+- Razorpay orders/refunds + optional webhooks (no Route/escrow)
 
 ## Setup
 
 1. Copy `.env.example` → `.env.local` and fill Supabase + `JWT_SECRET`.
-2. Apply migrations (`supabase/migrations`), including `008_community_schema.sql` (and `009` if you previously had Discord identity columns).
+2. Apply migrations (`supabase/migrations`), including `008_community_schema.sql`, `009` (if needed), and `010_hardening.sql` (OTP/pending orders, cities, soft-ban).
 3. Optional: Razorpay keys (otherwise payments run in mock mode).
-4. Optional: `DISCORD_SUPPORT_WEBHOOK_URL` for Help requests.
-5. `npm install && npm run dev`
-6. Promote an admin after first sign-in:
+4. Optional: `RAZORPAY_WEBHOOK_SECRET` and point Razorpay to `POST {SERVER}/api/webhooks/razorpay` for `payment.captured`.
+5. Optional: `DISCORD_SUPPORT_WEBHOOK_URL` for Help requests.
+6. `npm install && npm run dev`
+7. Promote an admin after first sign-in:
 
 ```sql
 UPDATE profiles SET role = 'admin', onboarding_complete = true WHERE email = 'your@email.com';
 ```
 
+## Scripts
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Next (3000) + Express (5001) |
+| `npm run build` / `npm start` | Production Next frontend |
+| `npm run start:server` | Production Express API |
+| `npm test` | Smoke tests (payment signatures + address ACL) |
+
 ## API surface
 
-- `/api/auth` — email OTP, onboarding, public profiles
-- `/api/events` — feed, pay-then-create, join, cancel/leave, attendance, complete
+- `/api/auth` — email OTP, onboarding, profile, avatar upload, public profiles
+- `/api/events` — feed, pay-then-create, join, edit, cancel/leave, attendance, complete
 - `/api/ratings` — eligible targets + submit
+- `/api/cities` — city autocomplete
 - `/api/support` — Help → Discord webhook
-- `/api/admin` — recent events/users (admin role)
+- `/api/admin` — events/users, force-cancel, promote/demote, soft-ban
+- `/api/webhooks/razorpay` — payment.captured fulfillment
+
+## Deploy
+
+The app is two processes: **Next.js** (UI) and **Express** (API). They share `.env` values for Supabase, JWT, and Razorpay.
+
+### Suggested layout
+
+1. **Frontend (Vercel)**  
+   - Root directory: repo root  
+   - Build: `npm run build`  
+   - Output: Next default  
+   - Env: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SERVER_URL` (public API URL)
+
+2. **API (Railway / Render / Fly)**  
+   - Start: `npm run start:server`  
+   - Env: `PORT`, `JWT_SECRET`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`, Razorpay + SMTP as needed  
+   - Health check: `GET /health`
+
+3. **Database**  
+   - Hosted Supabase project; push migrations with `npx supabase db push` (do not set `SUPABASE_DB` / `SUPABASE_DB_PASSWORD` locally if that breaks the CLI).
+
+4. **Razorpay webhooks**  
+   - URL: `https://<api-host>/api/webhooks/razorpay`  
+   - Events: `payment.captured` (and optionally `payment.authorized`)  
+   - Set `RAZORPAY_WEBHOOK_SECRET` to the dashboard signing secret.
+
+CORS is locked to `NEXT_PUBLIC_APP_URL`, so the frontend origin must match that value in production.

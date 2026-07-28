@@ -22,6 +22,11 @@
   gap: var(--space-sm);
 }
 
+.avatarCard {
+  padding: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
 @media (max-width: 640px) {
   .header {
     flex-direction: column;
