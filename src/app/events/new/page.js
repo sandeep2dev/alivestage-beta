@@ -7,11 +7,13 @@ import FormField from '@/components/FormField/FormField';
 import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { payAndConfirm } from '@/lib/payments';
 import styles from './new.module.css';
 
 export default function NewEventPage() {
   const router = useRouter();
+  const { openAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -24,6 +26,33 @@ export default function NewEventPage() {
     durationMinutes: 120,
   });
 
+  async function submitCreate() {
+    const token = getAccessToken();
+    if (!token) return;
+
+    const order = await apiFetch('/api/events/create-order', {
+      method: 'POST',
+      token,
+      body: {
+        title: form.title,
+        summary: form.summary,
+        description: form.description,
+        city: form.city,
+        precise_address: form.preciseAddress,
+        start_at: new Date(form.startAt).toISOString(),
+        duration_minutes: Number(form.durationMinutes),
+      },
+    });
+
+    const result = await payAndConfirm({
+      order,
+      token,
+      confirmPath: '/api/events/confirm-create',
+    });
+
+    router.push(`/events/${result.event.id}`);
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     setLoading(true);
@@ -31,31 +60,21 @@ export default function NewEventPage() {
     try {
       const token = getAccessToken();
       if (!token) {
-        router.push('/auth');
+        openAuth({
+          onSuccess: async () => {
+            setLoading(true);
+            try {
+              await submitCreate();
+            } catch (err) {
+              setError(err.message || 'Failed to create event');
+            } finally {
+              setLoading(false);
+            }
+          },
+        });
         return;
       }
-
-      const order = await apiFetch('/api/events/create-order', {
-        method: 'POST',
-        token,
-        body: {
-          title: form.title,
-          summary: form.summary,
-          description: form.description,
-          city: form.city,
-          precise_address: form.preciseAddress,
-          start_at: new Date(form.startAt).toISOString(),
-          duration_minutes: Number(form.durationMinutes),
-        },
-      });
-
-      const result = await payAndConfirm({
-        order,
-        token,
-        confirmPath: '/api/events/confirm-create',
-      });
-
-      router.push(`/events/${result.event.id}`);
+      await submitCreate();
     } catch (err) {
       setError(err.message || 'Failed to create event');
     } finally {
@@ -71,76 +90,94 @@ export default function NewEventPage() {
       <FormAlert type="error">{error}</FormAlert>
 
       <form className={`card ${styles.form}`} onSubmit={onSubmit} noValidate>
-        <FormField id="title" label="Title" required>
-          <input
-            className="input"
-            value={form.title}
-            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+        <section className="formSection">
+          <h2 className="formSectionTitle">Basics</h2>
+          <p className="formSectionHint">What shows on the public feed.</p>
+          <FormField id="title" label="Title" required>
+            <input
+              className="input"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              required
+            />
+          </FormField>
+          <FormField id="summary" label="Summary" required hint="Shown on the public feed">
+            <textarea
+              className="textarea"
+              rows={2}
+              value={form.summary}
+              onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+              required
+            />
+          </FormField>
+          <FormField id="description" label="Description">
+            <textarea
+              className="textarea"
+              rows={5}
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            />
+          </FormField>
+        </section>
+
+        <section className="formSection">
+          <h2 className="formSectionTitle">When</h2>
+          <div className="formGrid2">
+            <FormField id="start" label="Starts at" required>
+              <input
+                type="datetime-local"
+                className="input"
+                value={form.startAt}
+                onChange={(e) => setForm((f) => ({ ...f, startAt: e.target.value }))}
+                required
+              />
+            </FormField>
+            <FormField id="duration" label="Duration (minutes)" required>
+              <input
+                type="number"
+                className="input"
+                min={30}
+                max={1440}
+                value={form.durationMinutes}
+                onChange={(e) => setForm((f) => ({ ...f, durationMinutes: e.target.value }))}
+                required
+              />
+            </FormField>
+          </div>
+        </section>
+
+        <section className="formSection">
+          <h2 className="formSectionTitle">Location</h2>
+          <p className="formSectionHint">City is public. Precise address unlocks for paid joiners.</p>
+          <FormField id="city" label="City" required>
+            <CityAutocomplete
+              id="city"
+              value={form.city}
+              onChange={(city) => setForm((f) => ({ ...f, city }))}
+              required
+            />
+          </FormField>
+          <FormField
+            id="address"
+            label="Precise address"
             required
-          />
-        </FormField>
-        <FormField id="summary" label="Summary" required hint="Shown on the public feed">
-          <textarea
-            className="input"
-            rows={2}
-            value={form.summary}
-            onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
-            required
-          />
-        </FormField>
-        <FormField id="description" label="Description">
-          <textarea
-            className="input"
-            rows={5}
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          />
-        </FormField>
-        <FormField id="city" label="City" required>
-          <CityAutocomplete
-            id="city"
-            value={form.city}
-            onChange={(city) => setForm((f) => ({ ...f, city }))}
-            required
-          />
-        </FormField>
-        <FormField
-          id="address"
-          label="Precise address"
-          required
-          hint="Only visible to paid joiners and you"
-        >
-          <textarea
-            className="input"
-            rows={2}
-            value={form.preciseAddress}
-            onChange={(e) => setForm((f) => ({ ...f, preciseAddress: e.target.value }))}
-            required
-          />
-        </FormField>
-        <FormField id="start" label="Starts at" required>
-          <input
-            type="datetime-local"
-            className="input"
-            value={form.startAt}
-            onChange={(e) => setForm((f) => ({ ...f, startAt: e.target.value }))}
-            required
-          />
-        </FormField>
-        <FormField id="duration" label="Duration (minutes)" required>
-          <input
-            type="number"
-            className="input"
-            min={30}
-            max={1440}
-            value={form.durationMinutes}
-            onChange={(e) => setForm((f) => ({ ...f, durationMinutes: e.target.value }))}
-            required
-          />
-        </FormField>
-        <button type="submit" className="btn btnPrimary" disabled={loading}>
-          {loading ? 'Processing…' : 'Pay ₹200 & publish'}
-        </button>
+            hint="Only visible to paid joiners and you"
+          >
+            <textarea
+              className="textarea"
+              rows={2}
+              value={form.preciseAddress}
+              onChange={(e) => setForm((f) => ({ ...f, preciseAddress: e.target.value }))}
+              required
+            />
+          </FormField>
+        </section>
+
+        <div className={styles.submitRow}>
+          <button type="submit" className="btn btnPrimary" disabled={loading}>
+            {loading ? 'Processing…' : 'Pay ₹200 & publish'}
+          </button>
+        </div>
       </form>
     </div>
   );

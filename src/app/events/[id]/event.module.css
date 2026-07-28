@@ -3,17 +3,84 @@
   max-width: 44rem;
 }
 
+.skeletonTitle {
+  height: 1.75rem;
+  margin: var(--space-md) 0;
+}
+
+.actionStrip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.joinBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  align-items: flex-start;
+}
+
+.feeHint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.unlocked {
+  padding: var(--space-md);
+  background: var(--status-confirmed-bg);
+  border: 1px solid rgba(76, 175, 125, 0.35);
+  border-radius: var(--radius-md);
+}
+
+.unlockedLabel {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--status-confirmed);
+  margin-bottom: var(--space-xs);
+}
+
+.unlockedAddress {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.memberActions,
+.hostActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.editHint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  width: 100%;
+}
+
 .header {
   margin-bottom: var(--space-xl);
 }
 
 .eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: var(--font-size-sm);
-  color: var(--color-secondary);
-  font-weight: 600;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
   margin: 0 0 var(--space-sm);
+}
+
+.cityTag {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
 }
 
 .summary {
@@ -50,11 +117,11 @@
   margin: 0;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-xl);
+.attendanceHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-md);
+  line-height: 1.5;
 }
 
 .memberList {
@@ -88,4 +155,21 @@
   align-items: center;
   gap: var(--space-sm);
   font-size: var(--font-size-sm);
+}
+
+.saveAttendance {
+  position: sticky;
+  bottom: var(--space-md);
+}
+
+@media (max-width: 640px) {
+  .memberActions .btn,
+  .hostActions .btn {
+    flex: 1 1 auto;
+    min-width: 8rem;
+  }
+
+  .saveAttendance {
+    width: 100%;
+  }
 }

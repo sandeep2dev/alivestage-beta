@@ -8,7 +8,7 @@ import styles from './FanDrawer.module.css';
 
 const LINKS = [
   { href: '/', label: 'Jam feed' },
-  { href: '/my-events', label: 'My events' },
+  { href: '/my-events', label: 'My jams' },
   { href: '/events/new', label: 'Host a jam' },
   { href: '/profile', label: 'Profile' },
 ];

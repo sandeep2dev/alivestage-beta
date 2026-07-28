@@ -19,6 +19,13 @@
   width: 100%;
 }
 
+.fallbackHint {
+  margin-top: var(--space-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 @media (max-width: 640px) {
   .card {
     max-width: none;

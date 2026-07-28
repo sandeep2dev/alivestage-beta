@@ -62,3 +62,10 @@
 .empty {
   color: var(--color-text-muted);
 }
+
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}

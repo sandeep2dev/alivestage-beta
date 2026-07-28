@@ -3,35 +3,27 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import FormAlert from '@/components/FormAlert/FormAlert';
+import EventCard from '@/components/EventCard/EventCard';
+import { SkeletonList } from '@/components/Skeleton/Skeleton';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './page.module.css';
 
-function formatWhen(iso) {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
 export default function HomePage() {
+  const { openAuth } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       setError('');
+      const token = getAccessToken();
+      setSignedIn(Boolean(token));
       try {
-        const token = getAccessToken();
         const data = await apiFetch('/api/events/feed', { token: token || undefined });
         setEvents(data.events || []);
       } catch (err) {
@@ -48,42 +40,32 @@ export default function HomePage() {
     <div className={`container ${styles.page}`}>
       <header className={styles.hero}>
         <h1 className="pageTitle">Upcoming jams</h1>
-        <p className="pageSubtitle">
-          Local sessions first when you&apos;re signed in with a city. Join with ₹50 — address unlocks after payment.
-        </p>
+        <p className="pageSubtitle">Local sessions near you.</p>
       </header>
 
       <FormAlert type="error">{error}</FormAlert>
 
       {loading ? (
-        <p className={styles.empty}>Loading feed…</p>
+        <SkeletonList count={3} />
       ) : events.length === 0 ? (
         <div className={styles.empty}>
           <p>No open jams yet.</p>
-          <Link href="/events/new" className="btn btnPrimary">
-            Host the first one
-          </Link>
+          <div className={styles.emptyActions}>
+            {!signedIn && (
+              <button type="button" className="btn btnSecondary" onClick={() => openAuth()}>
+                Sign in
+              </button>
+            )}
+            <Link href="/events/new" className="btn btnPrimary">
+              Host a jam
+            </Link>
+          </div>
         </div>
       ) : (
         <ul className={styles.list}>
           {events.map((event) => (
             <li key={event.id}>
-              <Link href={`/events/${event.id}`} className={styles.card}>
-                <div className={styles.cardTop}>
-                  <div className={styles.badges}>
-                    <span className={styles.status}>{event.display_status || event.status}</span>
-                    {event.is_member && <span className={styles.joinedBadge}>Joined</span>}
-                  </div>
-                  <span className={styles.city}>{event.city}</span>
-                </div>
-                <h2 className={styles.title}>{event.title}</h2>
-                <p className={styles.summary}>{event.summary}</p>
-                <div className={styles.meta}>
-                  <span>{formatWhen(event.start_at)}</span>
-                  <span>{event.duration_minutes} min</span>
-                  {event.host?.name && <span>Host: {event.host.name}</span>}
-                </div>
-              </Link>
+              <EventCard event={event} variant="feed" />
             </li>
           ))}
         </ul>

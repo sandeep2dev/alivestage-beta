@@ -4,6 +4,7 @@ const { signToken } = require('../services/jwt');
 const { sendMail } = require('../services/email');
 const { requireAuth } = require('../middleware/auth');
 const { serializePublicProfile } = require('../services/reputation');
+const { serializeEvent } = require('../services/eventSerializer');
 
 const router = require('express').Router();
 
@@ -207,6 +208,38 @@ router.get('/users/:id', async (req, res) => {
   } catch (err) {
     console.error('[auth/users/:id]', err);
     res.status(500).json({ message: err.message || 'Failed to load profile' });
+  }
+});
+
+router.get('/users/:id/events', async (req, res) => {
+  try {
+    const { data: events, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('host_id', req.params.id)
+      .in('status', ['created', 'live', 'completed'])
+      .order('start_at', { ascending: false })
+      .limit(12);
+    if (error) throw error;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name, city, avatar_url, reputation_score, rating_count')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    res.json({
+      events: (events || []).map((event) =>
+        serializeEvent(event, {
+          viewerId: null,
+          isMember: false,
+          hostProfile: profile,
+        })
+      ),
+    });
+  } catch (err) {
+    console.error('[auth/users/:id/events]', err);
+    res.status(500).json({ message: err.message || 'Failed to load jams' });
   }
 });
 

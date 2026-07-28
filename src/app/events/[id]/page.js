@@ -5,28 +5,19 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import ConfirmationModal from '@/components/ConfirmationModal/ConfirmationModal';
+import EventStatusBadge from '@/components/EventStatusBadge/EventStatusBadge';
+import { SkeletonLine } from '@/components/Skeleton/Skeleton';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { formatEventWhen } from '@/lib/eventUi';
+import { useAuth } from '@/contexts/AuthContext';
 import { payAndConfirm } from '@/lib/payments';
 import styles from './event.module.css';
-
-function formatWhen(iso) {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
 
 export default function EventDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { openAuth } = useAuth();
   const [event, setEvent] = useState(null);
   const [membership, setMembership] = useState(null);
   const [members, setMembers] = useState([]);
@@ -71,12 +62,9 @@ export default function EventDetailPage() {
     }
   }
 
-  async function join() {
+  async function joinFlow() {
     const token = getAccessToken();
-    if (!token) {
-      router.push('/auth');
-      return;
-    }
+    if (!token) return;
     await runAction(async () => {
       const order = await apiFetch(`/api/events/${id}/join-order`, { method: 'POST', token });
       await payAndConfirm({
@@ -86,6 +74,19 @@ export default function EventDetailPage() {
       });
       setMessage('Joined — precise address unlocked.');
     });
+  }
+
+  function join() {
+    const token = getAccessToken();
+    if (!token) {
+      openAuth({
+        onSuccess: async () => {
+          await joinFlow();
+        },
+      });
+      return;
+    }
+    joinFlow();
   }
 
   function toggleAttended(membershipId, attended) {
@@ -117,7 +118,9 @@ export default function EventDetailPage() {
   if (loading) {
     return (
       <div className={`container ${styles.page}`}>
-        <p>Loading…</p>
+        <SkeletonLine width="40%" />
+        <SkeletonLine width="80%" className={styles.skeletonTitle} />
+        <SkeletonLine width="60%" />
       </div>
     );
   }
@@ -133,56 +136,32 @@ export default function EventDetailPage() {
   const isHost = event.is_host;
   const isMember = event.is_member;
   const open = ['created', 'live'].includes(event.status) && !event.has_ended;
+  const activeMembers = members.filter((m) => !m.cancelled_at);
+  const canEdit =
+    isHost && event.status === 'created' && !event.has_started && activeMembers.length === 0;
 
   return (
     <div className={`container ${styles.page}`}>
       <FormAlert type="error">{error}</FormAlert>
       <FormAlert type="success">{message}</FormAlert>
 
-      <header className={styles.header}>
-        <p className={styles.eyebrow}>
-          {event.display_status || event.status} · {event.city}
-        </p>
-        <h1 className="pageTitle">{event.title}</h1>
-        <p className={styles.summary}>{event.summary}</p>
-        <div className={styles.meta}>
-          <span>{formatWhen(event.start_at)}</span>
-          <span>{event.duration_minutes} minutes</span>
-          {event.host?.name && (
-            <span>
-              Host:{' '}
-              <Link href={`/u/${event.host.id}`}>{event.host.name}</Link>
-            </span>
-          )}
-        </div>
-      </header>
-
-      {event.description && (
-        <section className={styles.section}>
-          <h2>About</h2>
-          <p className={styles.body}>{event.description}</p>
-        </section>
-      )}
-
-      <section className={styles.section}>
-        <h2>Location</h2>
-        {event.precise_address ? (
-          <p className={styles.body}>{event.precise_address}</p>
-        ) : (
-          <p className={styles.muted}>
-            City: {event.city}. Precise address unlocks after you join (₹50).
-          </p>
-        )}
-      </section>
-
-      <div className={styles.actions}>
+      <section className={styles.actionStrip}>
         {open && !isHost && !isMember && (
-          <button type="button" className="btn btnPrimary" disabled={busy} onClick={join}>
-            {busy ? 'Processing…' : 'Join for ₹50'}
-          </button>
+          <div className={styles.joinBlock}>
+            <button type="button" className="btn btnPrimary" disabled={busy} onClick={join}>
+              {busy ? 'Processing…' : 'Join for ₹50'}
+            </button>
+            <p className={styles.feeHint}>Unlocks precise address · ₹50</p>
+          </div>
+        )}
+        {isMember && !isHost && event.precise_address && (
+          <div className={styles.unlocked}>
+            <span className={styles.unlockedLabel}>Address unlocked</span>
+            <p className={styles.unlockedAddress}>{event.precise_address}</p>
+          </div>
         )}
         {isMember && !isHost && open && (
-          <>
+          <div className={styles.memberActions}>
             <button
               type="button"
               className="btn btnSecondary"
@@ -205,6 +184,8 @@ export default function EventDetailPage() {
                 setConfirm({
                   title: 'Leave this jam?',
                   body: 'You will receive a 50% refund (₹25).',
+                  danger: true,
+                  confirmLabel: 'Leave jam',
                   onConfirm: () =>
                     runAction(async () => {
                       const token = getAccessToken();
@@ -217,15 +198,19 @@ export default function EventDetailPage() {
             >
               Leave (₹25 refund)
             </button>
-          </>
+          </div>
         )}
-        {isHost && event.status === 'created' && !event.has_started && members.filter((m) => !m.cancelled_at).length === 0 && (
-          <Link href={`/events/${id}/edit`} className="btn btnSecondary">
-            Edit details
-          </Link>
-        )}
-        {isHost && ['created', 'live'].includes(event.status) && (
-          <>
+        {isHost && open && (
+          <div className={styles.hostActions}>
+            {canEdit ? (
+              <Link href={`/events/${id}/edit`} className="btn btnSecondary">
+                Edit details
+              </Link>
+            ) : (
+              <p className={styles.editHint}>
+                Editing is locked once someone joins or the jam has started.
+              </p>
+            )}
             <button
               type="button"
               className="btn btnPrimary"
@@ -247,12 +232,14 @@ export default function EventDetailPage() {
             </button>
             <button
               type="button"
-              className="btn btnSecondary"
+              className="btn btnDanger"
               disabled={busy}
               onClick={() =>
                 setConfirm({
                   title: 'Cancel this jam?',
                   body: 'Joiners get a full ₹50 refund. Your ₹200 host fee is not refunded.',
+                  danger: true,
+                  confirmLabel: 'Cancel jam',
                   onConfirm: () =>
                     runAction(async () => {
                       const token = getAccessToken();
@@ -264,18 +251,70 @@ export default function EventDetailPage() {
             >
               Cancel event
             </button>
-          </>
+          </div>
         )}
         {event.status === 'completed' && (isHost || isMember) && (
           <Link href={`/events/${id}/rate`} className="btn btnPrimary">
             Rate attendees
           </Link>
         )}
-      </div>
+      </section>
+
+      <header className={styles.header}>
+        <div className={styles.eyebrow}>
+          <EventStatusBadge status={event.display_status || event.status} />
+          <span className={styles.cityTag}>{event.city}</span>
+        </div>
+        <h1 className="pageTitle">{event.title}</h1>
+        <p className={styles.summary}>{event.summary}</p>
+        <div className={styles.meta}>
+          <span>{formatEventWhen(event.start_at)}</span>
+          <span>{event.duration_minutes} minutes</span>
+          {event.host?.name && (
+            <span>
+              Host:{' '}
+              <Link href={`/u/${event.host.id}`}>{event.host.name}</Link>
+            </span>
+          )}
+          {isHost && activeMembers.length > 0 && (
+            <span>{activeMembers.length} joined</span>
+          )}
+        </div>
+      </header>
+
+      {event.description && (
+        <section className={styles.section}>
+          <h2>About</h2>
+          <p className={styles.body}>{event.description}</p>
+        </section>
+      )}
+
+      <section className={styles.section}>
+        <h2>Location</h2>
+        {event.precise_address ? (
+          <p className={styles.body}>{event.precise_address}</p>
+        ) : (
+          <p className={styles.muted}>
+            City: {event.city}. Precise address unlocks after you join (₹50).
+          </p>
+        )}
+      </section>
 
       {(isHost || isMember) && members.length > 0 && (
         <section className={styles.section}>
           <h2>Members</h2>
+          {isHost && (
+            <p className={styles.attendanceHint}>
+              <strong>I&apos;m here</strong> is optional for joiners. Your{' '}
+              <strong>Attended</strong> checkboxes unlock ratings.
+            </p>
+          )}
+          {!isHost && isMember && (
+            <p className={styles.attendanceHint}>
+              <strong>I&apos;m here</strong> lets the host know you arrived. Only host-marked
+              attendance counts for ratings.
+            </p>
+          )}
           <ul className={styles.memberList}>
             {members.map((m) => (
               <li key={m.id} className={styles.memberRow}>
@@ -300,7 +339,7 @@ export default function EventDetailPage() {
           {isHost && (
             <button
               type="button"
-              className="btn btnSecondary"
+              className={`btn btnSecondary ${styles.saveAttendance}`}
               disabled={busy}
               onClick={saveAttendance}
             >
@@ -315,7 +354,8 @@ export default function EventDetailPage() {
           open
           title={confirm.title}
           message={confirm.body}
-          confirmLabel="Confirm"
+          confirmLabel={confirm.confirmLabel || 'Confirm'}
+          danger={confirm.danger}
           onConfirm={confirm.onConfirm}
           onCancel={() => setConfirm(null)}
         />

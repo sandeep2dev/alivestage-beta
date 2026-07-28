@@ -1,0 +1,9 @@
+.badge {
+  text-transform: capitalize;
+}
+
+.role {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.7rem;
+}

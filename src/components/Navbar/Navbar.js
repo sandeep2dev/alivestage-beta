@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { clearAccessToken, getAccessToken } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import FanDrawer from '@/components/FanDrawer/FanDrawer';
 import HelpDialog from '@/components/HelpDialog/HelpDialog';
 import Logo from '@/components/Logo/Logo';
@@ -14,6 +15,7 @@ import styles from './Navbar.module.css';
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { openAuth, sessionVersion } = useAuth();
   const [profile, setProfile] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -36,7 +38,7 @@ export default function Navbar() {
     load();
     setDrawerOpen(false);
     setHelpOpen(false);
-  }, [pathname]);
+  }, [pathname, sessionVersion]);
 
   function handleSignOut() {
     clearAccessToken();
@@ -57,15 +59,19 @@ export default function Navbar() {
 
           <div className={styles.right}>
             {profile && (
-              <Link href="/events/new" className={styles.dashboardLink}>
+              <Link href="/events/new" className={`${styles.dashboardLink} ${styles.hostLink}`}>
                 Host a jam
               </Link>
             )}
 
             {!profile && (
-              <Link href="/auth" className={`btn btnPrimary ${styles.authBtn}`}>
-                Sign In
-              </Link>
+              <button
+                type="button"
+                className={`btn btnPrimary ${styles.authBtn}`}
+                onClick={() => openAuth()}
+              >
+                Sign in
+              </button>
             )}
 
             {isAdmin && (

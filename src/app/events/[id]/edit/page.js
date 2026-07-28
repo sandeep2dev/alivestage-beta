@@ -7,7 +7,7 @@ import FormField from '@/components/FormField/FormField';
 import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
-import styles from '../new/new.module.css';
+import styles from '../../new/new.module.css';
 
 function toLocalInput(iso) {
   if (!iso) return '';

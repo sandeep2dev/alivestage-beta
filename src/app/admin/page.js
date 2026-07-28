@@ -107,6 +107,8 @@ export default function AdminPage() {
                           setConfirm({
                             title: 'Force-cancel event?',
                             body: 'Joiners get a full ₹50 refund. Host create fee is not refunded.',
+                            danger: true,
+                            confirmLabel: 'Cancel event',
                             onConfirm: () =>
                               run(async () => {
                                 const token = getAccessToken();
@@ -184,6 +186,8 @@ export default function AdminPage() {
                           body: u.banned_at
                             ? 'They will be able to sign in again.'
                             : 'They will be blocked from authenticated actions.',
+                          danger: !u.banned_at,
+                          confirmLabel: u.banned_at ? 'Unban' : 'Ban user',
                           onConfirm: () =>
                             run(async () => {
                               const token = getAccessToken();
@@ -211,7 +215,8 @@ export default function AdminPage() {
           open
           title={confirm.title}
           message={confirm.body}
-          confirmLabel="Confirm"
+          confirmLabel={confirm.confirmLabel || 'Confirm'}
+          danger={confirm.danger}
           onConfirm={confirm.onConfirm}
           onCancel={() => setConfirm(null)}
         />

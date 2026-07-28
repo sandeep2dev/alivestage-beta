@@ -1,32 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import FormAlert from '@/components/FormAlert/FormAlert';
+import EventCard from '@/components/EventCard/EventCard';
+import { SkeletonList } from '@/components/Skeleton/Skeleton';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import styles from './my-events.module.css';
 
-function formatWhen(iso) {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
-
-function EventList({ title, events }) {
+function EventList({ title, events, emptyHint, emptyActions }) {
   if (!events?.length) {
     return (
       <section className={styles.section}>
         <h2>{title}</h2>
-        <p className={styles.empty}>None yet.</p>
+        <div className={styles.empty}>
+          <p>{emptyHint}</p>
+          {emptyActions}
+        </div>
       </section>
     );
   }
@@ -37,13 +29,7 @@ function EventList({ title, events }) {
       <ul className={styles.list}>
         {events.map((event) => (
           <li key={event.id}>
-            <Link href={`/events/${event.id}`} className={styles.card}>
-              <span className={styles.status}>{event.display_status || event.status}</span>
-              <strong>{event.title}</strong>
-              <span className={styles.meta}>
-                {event.city} · {formatWhen(event.start_at)}
-              </span>
-            </Link>
+            <EventCard event={event} variant="compact" />
           </li>
         ))}
       </ul>
@@ -52,36 +38,50 @@ function EventList({ title, events }) {
 }
 
 export default function MyEventsPage() {
-  const router = useRouter();
+  const { openAuth } = useAuth();
   const [hosting, setHosting] = useState([]);
   const [joining, setJoining] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      const token = getAccessToken();
-      if (!token) {
-        router.replace('/auth');
-        return;
-      }
-      try {
-        const data = await apiFetch('/api/events/mine', { token });
-        setHosting(data.hosting || []);
-        setJoining(data.joining || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    const token = getAccessToken();
+    if (!token) {
+      openAuth({ onSuccess: () => load() });
+      setLoading(false);
+      return;
     }
+    setLoading(true);
+    try {
+      const data = await apiFetch('/api/events/mine', { token });
+      setHosting(data.hosting || []);
+      setJoining(data.joining || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [openAuth]);
+
+  useEffect(() => {
     load();
-  }, [router]);
+  }, [load]);
+
+  const browseBtn = (
+    <Link href="/" className="btn btnSecondary">
+      Browse feed
+    </Link>
+  );
+  const hostBtn = (
+    <Link href="/events/new" className="btn btnPrimary">
+      Host a jam
+    </Link>
+  );
 
   return (
     <div className={`container ${styles.page}`}>
       <header className={styles.header}>
-        <h1 className="pageTitle">My events</h1>
+        <h1 className="pageTitle">My jams</h1>
         <Link href="/events/new" className="btn btnPrimary">
           Host a jam
         </Link>
@@ -89,11 +89,30 @@ export default function MyEventsPage() {
 
       <FormAlert type="error">{error}</FormAlert>
       {loading ? (
-        <p>Loading…</p>
+        <SkeletonList count={2} />
       ) : (
         <>
-          <EventList title="Hosting" events={hosting} />
-          <EventList title="Joining" events={joining} />
+          <EventList
+            title="Hosting"
+            events={hosting}
+            emptyHint="You haven't hosted a jam yet."
+            emptyActions={
+              <div className={styles.emptyActions}>
+                {browseBtn}
+                {hostBtn}
+              </div>
+            }
+          />
+          <EventList
+            title="Joining"
+            events={joining}
+            emptyHint="You haven't joined a jam yet."
+            emptyActions={
+              <div className={styles.emptyActions}>
+                {browseBtn}
+              </div>
+            }
+          />
         </>
       )}
     </div>
