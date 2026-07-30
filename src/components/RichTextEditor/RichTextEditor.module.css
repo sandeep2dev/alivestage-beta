@@ -6,6 +6,10 @@
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+.shell.inputError {
+  border-color: var(--error);
+}
+
 .shell:focus-within {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);

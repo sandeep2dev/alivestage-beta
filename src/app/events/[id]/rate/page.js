@@ -64,10 +64,13 @@ export default function RateEventPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  async function submitOne(person) {
+  async function submitOne(person, event) {
     const score = Number(scores[person.ratee_id]);
     if (!score) {
       setError('Pick a score 1–5');
+      const row = event?.currentTarget?.closest(`.${styles.row}`);
+      row?.querySelector(`.${styles.stars} button`)?.focus();
+      row?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
     setBusy(true);
@@ -148,7 +151,7 @@ export default function RateEventPage() {
                   type="button"
                   className="btn btnPrimary"
                   disabled={busy || !scores[person.ratee_id]}
-                  onClick={() => submitOne(person)}
+                  onClick={(e) => submitOne(person, e)}
                 >
                   Submit
                 </button>

@@ -1,4 +1,7 @@
-import { cloneElement, isValidElement } from 'react';
+'use client';
+
+import { cloneElement, isValidElement, useEffect, useRef } from 'react';
+import { focusFieldControl } from '@/lib/formFocus';
 
 export default function FormField({
   id,
@@ -9,9 +12,22 @@ export default function FormField({
   children,
   noBottomMargin = false,
 }) {
+  const groupRef = useRef(null);
   const errorId = error ? `${id}-error` : undefined;
   const hintId = hint && !error ? `${id}-hint` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
+
+  useEffect(() => {
+    if (!error || !id) return undefined;
+    const frame = requestAnimationFrame(() => {
+      const scope = groupRef.current?.closest('form') || groupRef.current?.closest('.card');
+      const firstInvalid = scope?.querySelector('[aria-invalid="true"]');
+      if (firstInvalid?.id === id) {
+        focusFieldControl(id);
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [error, id]);
 
   const fieldProps = {
     id,
@@ -37,7 +53,10 @@ export default function FormField({
   }
 
   return (
-    <div className={`formGroup ${noBottomMargin ? 'noBottomMargin' : ''}`}>
+    <div
+      ref={groupRef}
+      className={`formGroup ${noBottomMargin ? 'noBottomMargin' : ''}`}
+    >
       {label && (
         <label className="label" htmlFor={id}>
           {label}

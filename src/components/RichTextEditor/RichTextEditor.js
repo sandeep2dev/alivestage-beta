@@ -28,6 +28,8 @@ export default function RichTextEditor({
   value = '',
   onChange,
   placeholder = 'Describe your jam — paste formatted text, add links and photos…',
+  id,
+  className = '',
   'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedBy,
 }) {
@@ -74,9 +76,10 @@ export default function RichTextEditor({
     immediatelyRender: false,
     editorProps: {
       attributes: {
+        ...(id ? { id } : {}),
         class: styles.editorContent,
-        'aria-invalid': ariaInvalid,
-        'aria-describedby': ariaDescribedBy,
+        ...(ariaInvalid ? { 'aria-invalid': 'true' } : {}),
+        ...(ariaDescribedBy ? { 'aria-describedby': ariaDescribedBy } : {}),
       },
       handlePaste: (_view, event) => {
         const items = event.clipboardData?.items;
@@ -122,11 +125,16 @@ export default function RichTextEditor({
   }
 
   if (!editor) {
-    return <div className={styles.shell} aria-hidden="true" />;
+    return <div className={styles.shell} id={id} aria-hidden="true" />;
   }
 
   return (
-    <div className={styles.shell}>
+    <div
+      id={id}
+      className={`${styles.shell} ${className}`.trim()}
+      aria-invalid={ariaInvalid}
+      aria-describedby={ariaDescribedBy}
+    >
       <div className={styles.toolbar} role="toolbar" aria-label="Formatting">
         <ToolbarButton
           title="Bold"

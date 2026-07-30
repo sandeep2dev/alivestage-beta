@@ -6,6 +6,7 @@ import FormField from '@/components/FormField/FormField';
 import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken, setAccessToken } from '@/lib/auth';
+import { validateFormAndFocus } from '@/lib/formFocus';
 import styles from './OnboardingForm.module.css';
 
 export default function OnboardingForm({ initialProfile, onSuccess }) {
@@ -29,6 +30,8 @@ export default function OnboardingForm({ initialProfile, onSuccess }) {
 
   async function saveProfile(e) {
     e.preventDefault();
+    if (!validateFormAndFocus(e.currentTarget)) return;
+
     setLoading(true);
     setError('');
     try {

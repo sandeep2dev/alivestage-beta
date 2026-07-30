@@ -10,6 +10,7 @@ import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
 import { payAndConfirm } from '@/lib/payments';
+import { validateFormAndFocus } from '@/lib/formFocus';
 import styles from './new.module.css';
 
 export default function NewEventPage() {
@@ -56,6 +57,8 @@ export default function NewEventPage() {
 
   async function onSubmit(e) {
     e.preventDefault();
+    if (!validateFormAndFocus(e.currentTarget)) return;
+
     setLoading(true);
     setError('');
     try {

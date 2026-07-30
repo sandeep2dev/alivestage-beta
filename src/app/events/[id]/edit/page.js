@@ -8,6 +8,7 @@ import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import RichTextEditor from '@/components/RichTextEditor';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { validateFormAndFocus } from '@/lib/formFocus';
 import styles from '../../new/new.module.css';
 
 function toLocalInput(iso) {
@@ -71,6 +72,8 @@ export default function EditEventPage() {
 
   async function onSubmit(e) {
     e.preventDefault();
+    if (!validateFormAndFocus(e.currentTarget)) return;
+
     setLoading(true);
     setError('');
     try {
