@@ -13,6 +13,7 @@ import { getAccessToken } from '@/lib/auth';
 import { formatEventWhen } from '@/lib/eventUi';
 import { useAuth } from '@/contexts/AuthContext';
 import { payAndConfirm } from '@/lib/payments';
+import { getMapsDirectionsUrl } from '@/lib/maps';
 import styles from './event.module.css';
 
 export default function EventDetailPage() {
@@ -157,7 +158,7 @@ export default function EventDetailPage() {
         )}
         {isMember && !isHost && event.precise_address && (
           <div className={styles.unlocked}>
-            <span className={styles.unlockedLabel}>Address unlocked</span>
+            <span className={styles.unlockedLabel}>Joined</span>
             <p className={styles.unlockedAddress}>{event.precise_address}</p>
           </div>
         )}
@@ -293,7 +294,25 @@ export default function EventDetailPage() {
       <section className={styles.section}>
         <h2>Location</h2>
         {event.precise_address ? (
-          <p className={styles.body}>{event.precise_address}</p>
+          <>
+            <p className={styles.body}>{event.precise_address}</p>
+            {event.venue_lat != null && event.venue_lng != null && (
+              <a
+                href={getMapsDirectionsUrl(event.venue_lat, event.venue_lng)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.directionsLink}
+              >
+                <span className={styles.directionsIcon} aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m3 11 19-9-9 19-2-8-8-2z" />
+                    <circle cx="12" cy="11" r="1.25" fill="currentColor" stroke="none" />
+                  </svg>
+                </span>
+                Get Directions
+              </a>
+            )}
+          </>
         ) : (
           <p className={styles.muted}>
             City: {event.city}. Precise address unlocks after you join (₹50).

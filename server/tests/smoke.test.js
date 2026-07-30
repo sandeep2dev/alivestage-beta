@@ -22,6 +22,42 @@ const {
   normalizeDescriptionForDisplay,
 } = require('../services/richText');
 const { serializeEvent } = require('../services/eventSerializer');
+const { validateEventPayload } = require('../services/eventPayload');
+
+describe('eventPayload venue coordinates', () => {
+  it('includes venue_lat and venue_lng in validated create payload', () => {
+    const startAt = new Date(Date.now() + 86400000).toISOString();
+    const parsed = validateEventPayload({
+      title: 'Friday Jam Night',
+      summary: 'Open jam for all skill levels welcome',
+      description: '',
+      city: 'Udaipur',
+      precise_address: 'Zostel Udaipur, Silavat Vari Road',
+      venue_lat: 24.583846,
+      venue_lng: 73.682966,
+      start_at: startAt,
+      duration_minutes: 120,
+    });
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.value.venue_lat, 24.583846);
+    assert.equal(parsed.value.venue_lng, 73.682966);
+  });
+
+  it('rejects create payload without venue coordinates', () => {
+    const startAt = new Date(Date.now() + 86400000).toISOString();
+    const parsed = validateEventPayload({
+      title: 'Friday Jam Night',
+      summary: 'Open jam for all skill levels welcome',
+      description: '',
+      city: 'Udaipur',
+      precise_address: 'Zostel Udaipur, Silavat Vari Road',
+      start_at: startAt,
+      duration_minutes: 120,
+    });
+    assert.equal(parsed.ok, false);
+    assert.match(parsed.message, /pin on the map/i);
+  });
+});
 
 describe('payment helpers', () => {
   it('converts INR to paise', () => {
@@ -77,6 +113,8 @@ describe('eventSerializer address ACL', () => {
     description: 'Bring your gear',
     city: 'Pune',
     precise_address: '12 MG Road, Pune',
+    venue_lat: 18.5204,
+    venue_lng: 73.8567,
     start_at: '2030-01-01T18:00:00.000Z',
     duration_minutes: 120,
     end_at: '2030-01-01T20:00:00.000Z',
@@ -101,6 +139,8 @@ describe('eventSerializer address ACL', () => {
       hostProfile,
     });
     assert.equal(serialized.precise_address, undefined);
+    assert.equal(serialized.venue_lat, undefined);
+    assert.equal(serialized.venue_lng, undefined);
     assert.equal(serialized.city, 'Pune');
     assert.equal(serialized.is_member, false);
     assert.equal(serialized.is_host, false);
@@ -114,6 +154,8 @@ describe('eventSerializer address ACL', () => {
       hostProfile,
     });
     assert.equal(serialized.precise_address, '12 MG Road, Pune');
+    assert.equal(serialized.venue_lat, 18.5204);
+    assert.equal(serialized.venue_lng, 73.8567);
     assert.equal(serialized.is_member, true);
     assert.equal(serialized.display_status, 'Upcoming');
   });

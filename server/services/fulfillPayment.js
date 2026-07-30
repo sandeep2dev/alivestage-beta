@@ -59,11 +59,21 @@ async function fulfillHostCreate({ orderId, paymentId, expectedUserId = null }) 
 
   await takeDraft(orderId);
 
+  const draftEvent = draft.event || {};
   const { data: event, error: eventError } = await supabase
     .from('events')
     .insert({
       host_id: draft.userId,
-      ...draft.event,
+      title: draftEvent.title,
+      summary: draftEvent.summary,
+      description: draftEvent.description ?? '',
+      city: draftEvent.city,
+      precise_address: draftEvent.precise_address,
+      venue_lat: draftEvent.venue_lat ?? null,
+      venue_lng: draftEvent.venue_lng ?? null,
+      start_at: draftEvent.start_at,
+      duration_minutes: draftEvent.duration_minutes,
+      end_at: draftEvent.end_at,
       visibility: 'public',
       status: 'created',
     })

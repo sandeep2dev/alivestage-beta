@@ -77,6 +77,10 @@ function serializeEvent(event, { viewerId = null, isMember = false, hostProfile 
 
   if (canSeeAddress) {
     base.precise_address = event.precise_address;
+    if (event.venue_lat != null && event.venue_lng != null) {
+      base.venue_lat = Number(event.venue_lat);
+      base.venue_lng = Number(event.venue_lng);
+    }
   }
 
   return base;

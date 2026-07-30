@@ -20,59 +20,7 @@ const {
 
 const router = require('express').Router();
 
-function computeEndAt(startAt, durationMinutes) {
-  return new Date(new Date(startAt).getTime() + Number(durationMinutes) * 60 * 1000);
-}
-
-function validateEventPayload(body, { allowPastStart = false } = {}) {
-  const title = String(body?.title || '').trim();
-  const summary = String(body?.summary || '').trim();
-  const city = String(body?.city || '').trim();
-  const preciseAddress = String(body?.precise_address || body?.preciseAddress || '').trim();
-  const startAt = body?.start_at || body?.startAt;
-  const durationMinutes = Number(body?.duration_minutes ?? body?.durationMinutes);
-
-  const descriptionResult = normalizeDescriptionForStorage(body?.description ?? '');
-  if (!descriptionResult.ok) {
-    return { ok: false, message: descriptionResult.message };
-  }
-
-  if (title.length < 3 || title.length > 120) {
-    return { ok: false, message: 'Title must be 3–120 characters' };
-  }
-  if (summary.length < 10 || summary.length > 280) {
-    return { ok: false, message: 'Summary must be 10–280 characters' };
-  }
-  if (city.length < 2) {
-    return { ok: false, message: 'City is required' };
-  }
-  if (preciseAddress.length < 5) {
-    return { ok: false, message: 'Precise address is required' };
-  }
-  if (!startAt || Number.isNaN(new Date(startAt).getTime())) {
-    return { ok: false, message: 'Valid start time is required' };
-  }
-  if (!Number.isFinite(durationMinutes) || durationMinutes < 30 || durationMinutes > 24 * 60) {
-    return { ok: false, message: 'Duration must be between 30 and 1440 minutes' };
-  }
-  if (!allowPastStart && new Date(startAt).getTime() < Date.now() - 60 * 1000) {
-    return { ok: false, message: 'Start time must be in the future' };
-  }
-
-  return {
-    ok: true,
-    value: {
-      title,
-      summary,
-      description: descriptionResult.html,
-      city,
-      precise_address: preciseAddress,
-      start_at: new Date(startAt).toISOString(),
-      duration_minutes: durationMinutes,
-      end_at: computeEndAt(startAt, durationMinutes).toISOString(),
-    },
-  };
-}
+const { validateEventPayload } = require('../services/eventPayload');
 
 async function loadMembership(eventId, userId) {
   if (!userId) return null;
@@ -478,10 +426,12 @@ router.patch('/:id', requireAuth, async (req, res) => {
         description: req.body?.description ?? event.description,
         city: req.body?.city ?? event.city,
         precise_address: req.body?.precise_address ?? req.body?.preciseAddress ?? event.precise_address,
+        venue_lat: req.body?.venue_lat ?? req.body?.venueLat ?? event.venue_lat,
+        venue_lng: req.body?.venue_lng ?? req.body?.venueLng ?? event.venue_lng,
         start_at: req.body?.start_at ?? req.body?.startAt ?? event.start_at,
         duration_minutes: req.body?.duration_minutes ?? req.body?.durationMinutes ?? event.duration_minutes,
       },
-      { allowPastStart: false }
+      { allowPastStart: false, requireVenueCoords: true }
     );
     if (!parsed.ok) return res.status(400).json({ message: parsed.message });
 

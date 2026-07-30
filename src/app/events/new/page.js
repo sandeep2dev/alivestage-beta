@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
@@ -12,20 +13,26 @@ import { getAccessToken } from '@/lib/auth';
 import { minDateTimeLocal } from '@/lib/datetime';
 import { useAuth } from '@/contexts/AuthContext';
 import { payAndConfirm } from '@/lib/payments';
-import { validateFormAndFocus } from '@/lib/formFocus';
+import { focusFieldControl, validateFormAndFocus } from '@/lib/formFocus';
 import styles from './new.module.css';
+
+const VenueLocationPicker = dynamic(() => import('@/components/VenueLocationPicker'), {
+  ssr: false,
+  loading: () => <p className="formSectionHint">Loading map…</p>,
+});
 
 export default function NewEventPage() {
   const router = useRouter();
   const { openAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [venueError, setVenueError] = useState('');
   const [form, setForm] = useState({
     title: '',
     summary: '',
     description: '',
     city: '',
-    preciseAddress: '',
+    venue: { address: '', lat: null, lng: null },
     startAt: '',
     durationMinutes: 120,
   });
@@ -42,7 +49,9 @@ export default function NewEventPage() {
         summary: form.summary,
         description: form.description,
         city: form.city,
-        precise_address: form.preciseAddress,
+        precise_address: form.venue.address,
+        venue_lat: form.venue.lat,
+        venue_lng: form.venue.lng,
         start_at: new Date(form.startAt).toISOString(),
         duration_minutes: Number(form.durationMinutes),
       },
@@ -60,6 +69,13 @@ export default function NewEventPage() {
   async function onSubmit(e) {
     e.preventDefault();
     if (!validateFormAndFocus(e.currentTarget)) return;
+
+    if (form.venue.lat == null || form.venue.lng == null) {
+      setVenueError('Drop a pin on the map to confirm the exact venue location.');
+      focusFieldControl('venue-location');
+      return;
+    }
+    setVenueError('');
 
     setLoading(true);
     setError('');
@@ -161,17 +177,18 @@ export default function NewEventPage() {
             />
           </FormField>
           <FormField
-            id="address"
+            id="venue-location"
             label="Precise address"
             required
-            hint="Only visible to paid joiners and you"
+            hint="Search, pick a result, or drop a pin — only visible to paid joiners and you"
           >
-            <textarea
-              className="textarea"
-              rows={2}
-              value={form.preciseAddress}
-              onChange={(e) => setForm((f) => ({ ...f, preciseAddress: e.target.value }))}
-              required
+            <VenueLocationPicker
+              value={form.venue}
+              onChange={(venue) => {
+                setVenueError('');
+                setForm((f) => ({ ...f, venue }));
+              }}
+              error={venueError}
             />
           </FormField>
         </section>
