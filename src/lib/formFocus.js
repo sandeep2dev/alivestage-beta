@@ -40,8 +40,10 @@ export function validateFormAndFocus(form) {
   form.reportValidity();
   if (firstInvalid) {
     requestAnimationFrame(() => {
-      firstInvalid.focus({ preventScroll: false });
-      (firstInvalid.closest('.formGroup') || firstInvalid).scrollIntoView({
+      const picker = firstInvalid.closest('[data-datetime-picker]');
+      const focusEl = picker?.querySelector('[data-datetime-trigger]') || firstInvalid;
+      focusEl.focus({ preventScroll: false });
+      (focusEl.closest('.formGroup') || focusEl).scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
       });

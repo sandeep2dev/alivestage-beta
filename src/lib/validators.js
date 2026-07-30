@@ -51,8 +51,4 @@ export function lengthBetween(value, { min, max, label = 'This field' }) {
 }
 
 /** datetime-local min value ~1 hour from now */
-export function minDateTimeLocal(hoursAhead = 1) {
-  const d = new Date(Date.now() + hoursAhead * 60 * 60 * 1000);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+export { minDateTimeLocal } from '@/lib/datetime';

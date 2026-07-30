@@ -6,8 +6,10 @@ import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
 import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import RichTextEditor from '@/components/RichTextEditor';
+import DateTimePicker from '@/components/DateTimePicker/DateTimePicker';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { minDateTimeLocal } from '@/lib/datetime';
 import { useAuth } from '@/contexts/AuthContext';
 import { payAndConfirm } from '@/lib/payments';
 import { validateFormAndFocus } from '@/lib/formFocus';
@@ -125,12 +127,11 @@ export default function NewEventPage() {
         <section className="formSection">
           <h2 className="formSectionTitle">When</h2>
           <div className="formGrid2">
-            <FormField id="start" label="Starts at" required>
-              <input
-                type="datetime-local"
-                className="input"
+            <FormField id="start" label="Starts at" required hint="At least 1 hour from now">
+              <DateTimePicker
                 value={form.startAt}
-                onChange={(e) => setForm((f) => ({ ...f, startAt: e.target.value }))}
+                onChange={(startAt) => setForm((f) => ({ ...f, startAt }))}
+                min={minDateTimeLocal(1)}
                 required
               />
             </FormField>

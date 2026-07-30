@@ -8,16 +8,10 @@ import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
 import RichTextEditor from '@/components/RichTextEditor';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import DateTimePicker from '@/components/DateTimePicker/DateTimePicker';
+import { isoToLocalDateTimeValue, minDateTimeLocal } from '@/lib/datetime';
 import { validateFormAndFocus } from '@/lib/formFocus';
 import styles from '../../new/new.module.css';
-
-function toLocalInput(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export default function EditEventPage() {
   const { id } = useParams();
@@ -58,7 +52,7 @@ export default function EditEventPage() {
           description: event.description || '',
           city: event.city || '',
           preciseAddress: event.precise_address || '',
-          startAt: toLocalInput(event.start_at),
+          startAt: isoToLocalDateTimeValue(event.start_at),
           durationMinutes: event.duration_minutes || 120,
         });
         setReady(true);
@@ -155,12 +149,11 @@ export default function EditEventPage() {
             required
           />
         </FormField>
-        <FormField id="start" label="Starts at" required>
-          <input
-            type="datetime-local"
-            className="input"
+        <FormField id="start" label="Starts at" required hint="Must be in the future">
+          <DateTimePicker
             value={form.startAt}
-            onChange={(e) => setForm((f) => ({ ...f, startAt: e.target.value }))}
+            onChange={(startAt) => setForm((f) => ({ ...f, startAt }))}
+            min={minDateTimeLocal(1)}
             required
           />
         </FormField>

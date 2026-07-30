@@ -297,7 +297,8 @@ form {
 .textarea.inputError,
 .input[aria-invalid="true"],
 .select[aria-invalid="true"],
-.textarea[aria-invalid="true"] {
+.textarea[aria-invalid="true"],
+button.input[aria-invalid="true"] {
   border-color: var(--error);
 }
 
@@ -306,7 +307,8 @@ form {
 .textarea.inputError:focus,
 .input[aria-invalid="true"]:focus,
 .select[aria-invalid="true"]:focus,
-.textarea[aria-invalid="true"]:focus {
+.textarea[aria-invalid="true"]:focus,
+button.input[aria-invalid="true"]:focus {
   border-color: var(--error);
   box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.22);
 }
