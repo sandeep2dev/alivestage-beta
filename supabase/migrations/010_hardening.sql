@@ -86,7 +86,7 @@ INSERT INTO cities (name, state) VALUES
   ('Dehradun', 'Uttarakhand'),
   ('Shimla', 'Himachal Pradesh'),
   ('Srinagar', 'Jammu and Kashmir'),
-  ('Gurgaon', 'Haryana'),
+  ('Gurugram', 'Haryana'),
   ('Faridabad', 'Haryana'),
   ('Thane', 'Maharashtra'),
   ('Navi Mumbai', 'Maharashtra'),
