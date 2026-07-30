@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import ConfirmationModal from '@/components/ConfirmationModal/ConfirmationModal';
 import EventStatusBadge from '@/components/EventStatusBadge/EventStatusBadge';
+import RichTextContent from '@/components/RichTextContent/RichTextContent';
 import { SkeletonLine } from '@/components/Skeleton/Skeleton';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
@@ -285,7 +286,7 @@ export default function EventDetailPage() {
       {event.description && (
         <section className={styles.section}>
           <h2>About</h2>
-          <p className={styles.body}>{event.description}</p>
+          <RichTextContent html={event.description} />
         </section>
       )}
 

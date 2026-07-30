@@ -1,0 +1,121 @@
+.shell {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-elevated);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.shell:focus-within {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.toolBtn {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toolBtn:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.toolBtnActive {
+  background: rgba(255, 107, 53, 0.14);
+  color: var(--accent-primary);
+  border-color: rgba(255, 107, 53, 0.35);
+}
+
+.divider {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--color-border);
+  margin: 0 var(--space-xs);
+}
+
+.hiddenFile {
+  display: none;
+}
+
+.uploadError {
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--error);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.editorContent {
+  min-height: 10rem;
+  max-height: 24rem;
+  overflow-y: auto;
+  padding: var(--space-md);
+  color: var(--color-text);
+  line-height: 1.55;
+}
+
+.editorContent :global(p) {
+  margin: 0 0 0.75rem;
+}
+
+.editorContent :global(p:last-child) {
+  margin-bottom: 0;
+}
+
+.editorContent :global(h2),
+.editorContent :global(h3) {
+  font-family: var(--font-display), sans-serif;
+  margin: 0 0 0.5rem;
+}
+
+.editorContent :global(ul),
+.editorContent :global(ol) {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.editorContent :global(a) {
+  color: var(--accent-primary);
+  text-decoration: underline;
+}
+
+.editorContent :global(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  margin: 0.5rem 0;
+  display: block;
+}
+
+.editorContent :global(.is-editor-empty:first-child::before) {
+  color: var(--color-text-muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .toolBtn {
+    min-height: var(--touch-min);
+  }
+}

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
 import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
+import RichTextEditor from '@/components/RichTextEditor';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import styles from '../../new/new.module.css';
@@ -128,12 +129,10 @@ export default function EditEventPage() {
             required
           />
         </FormField>
-        <FormField id="description" label="Description">
-          <textarea
-            className="input"
-            rows={5}
+        <FormField id="description" label="Description" hint="Formatting, links, and photos appear the same for joiners.">
+          <RichTextEditor
             value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            onChange={(description) => setForm((f) => ({ ...f, description }))}
           />
         </FormField>
         <FormField id="city" label="City" required>

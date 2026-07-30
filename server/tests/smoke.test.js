@@ -17,6 +17,10 @@ const {
   verifyWebhookSignature,
   amountToPaise,
 } = require('../services/payment');
+const {
+  normalizeDescriptionForStorage,
+  normalizeDescriptionForDisplay,
+} = require('../services/richText');
 const { serializeEvent } = require('../services/eventSerializer');
 
 describe('payment helpers', () => {
@@ -47,6 +51,20 @@ describe('payment helpers', () => {
 
     assert.equal(verifyWebhookSignature(body, signature), true);
     assert.equal(verifyWebhookSignature(body, 'nope'), false);
+  });
+
+  it('sanitizes rich event descriptions and strips unsafe markup', () => {
+    const stored = normalizeDescriptionForStorage(
+      '<p>Hello <strong>jam</strong></p><script>alert(1)</script><img src="https://evil.test/x.png">'
+    );
+    assert.equal(stored.ok, true);
+    assert.match(stored.html, /<strong>jam<\/strong>/);
+    assert.doesNotMatch(stored.html, /script/i);
+    assert.doesNotMatch(stored.html, /evil\.test/);
+
+    const legacy = normalizeDescriptionForDisplay('Plain text\n\nSecond paragraph');
+    assert.match(legacy, /<p>Plain text<\/p>/);
+    assert.match(legacy, /Second paragraph/);
   });
 });
 

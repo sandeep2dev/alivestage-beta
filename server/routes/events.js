@@ -10,6 +10,7 @@ const { saveDraft } = require('../services/pendingOrders');
 const { fulfillHostCreate, fulfillJoin } = require('../services/fulfillPayment');
 const { cancelEvent } = require('../services/cancelEvent');
 const { serializeEvent } = require('../services/eventSerializer');
+const { normalizeDescriptionForStorage, eventImagePath } = require('../services/richText');
 const {
   HOST_CREATE_FEE,
   JOIN_FEE,
@@ -26,20 +27,21 @@ function computeEndAt(startAt, durationMinutes) {
 function validateEventPayload(body, { allowPastStart = false } = {}) {
   const title = String(body?.title || '').trim();
   const summary = String(body?.summary || '').trim();
-  const description = String(body?.description || '').trim();
   const city = String(body?.city || '').trim();
   const preciseAddress = String(body?.precise_address || body?.preciseAddress || '').trim();
   const startAt = body?.start_at || body?.startAt;
   const durationMinutes = Number(body?.duration_minutes ?? body?.durationMinutes);
+
+  const descriptionResult = normalizeDescriptionForStorage(body?.description ?? '');
+  if (!descriptionResult.ok) {
+    return { ok: false, message: descriptionResult.message };
+  }
 
   if (title.length < 3 || title.length > 120) {
     return { ok: false, message: 'Title must be 3–120 characters' };
   }
   if (summary.length < 10 || summary.length > 280) {
     return { ok: false, message: 'Summary must be 10–280 characters' };
-  }
-  if (description.length > 10000) {
-    return { ok: false, message: 'Description is too long' };
   }
   if (city.length < 2) {
     return { ok: false, message: 'City is required' };
@@ -62,7 +64,7 @@ function validateEventPayload(body, { allowPastStart = false } = {}) {
     value: {
       title,
       summary,
-      description,
+      description: descriptionResult.html,
       city,
       precise_address: preciseAddress,
       start_at: new Date(startAt).toISOString(),
@@ -241,6 +243,50 @@ router.get('/:id', optionalAuth, async (req, res) => {
   } catch (err) {
     console.error('[events/:id]', err);
     res.status(500).json({ message: err.message || 'Failed to load event' });
+  }
+});
+
+/** Upload inline image for event description → public Supabase URL. */
+router.post('/upload-image', requireAuth, async (req, res) => {
+  try {
+    const base64 = String(req.body?.base64 || '');
+    const contentType = String(req.body?.contentType || 'image/jpeg').toLowerCase();
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(contentType)) {
+      return res.status(400).json({ message: 'Unsupported image type' });
+    }
+
+    const match = base64.match(/^data:([^;]+);base64,(.+)$/);
+    const raw = match ? match[2] : base64.replace(/\s/g, '');
+    if (!raw || raw.length < 32) {
+      return res.status(400).json({ message: 'Image data is required' });
+    }
+
+    const buffer = Buffer.from(raw, 'base64');
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ message: 'Image must be under 5MB' });
+    }
+
+    const ext =
+      contentType === 'image/png'
+        ? 'png'
+        : contentType === 'image/webp'
+          ? 'webp'
+          : contentType === 'image/gif'
+            ? 'gif'
+            : 'jpg';
+    const path = eventImagePath(req.profile.id, ext);
+
+    const { error: uploadError } = await supabase.storage
+      .from('event-images')
+      .upload(path, buffer, { contentType });
+    if (uploadError) throw uploadError;
+
+    const { data: pub } = supabase.storage.from('event-images').getPublicUrl(path);
+    res.json({ url: pub.publicUrl });
+  } catch (err) {
+    console.error('[events/upload-image]', err);
+    res.status(500).json({ message: err.message || 'Failed to upload image' });
   }
 });
 
