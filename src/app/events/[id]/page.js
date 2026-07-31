@@ -150,10 +150,10 @@ export default function EventDetailPage() {
       <section className={styles.actionStrip}>
         {open && !isHost && !isMember && (
           <div className={styles.joinBlock}>
+            <p className={styles.joinCopy}>Reserve your spot now</p>
             <button type="button" className="btn btnPrimary" disabled={busy} onClick={join}>
               {busy ? 'Processing…' : 'Join for ₹50'}
             </button>
-            <p className={styles.feeHint}>Unlocks precise address · ₹50</p>
           </div>
         )}
         {isMember && !isHost && event.precise_address && (
@@ -315,7 +315,7 @@ export default function EventDetailPage() {
           </>
         ) : (
           <p className={styles.muted}>
-            City: {event.city}. Precise address unlocks after you join (₹50).
+            City: {event.city}. Exact venue available to attendees only.
           </p>
         )}
       </section>
