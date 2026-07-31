@@ -153,6 +153,48 @@ router.get('/mine', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/:id/calendar.ics', async (req, res) => {
+  try {
+    const eventId = req.params.id;
+    const userId = String(req.query.u || '');
+    const sig = String(req.query.sig || '');
+    const { verifyCalendarSignature, buildEventIcs } = require('../services/calendar');
+
+    if (!verifyCalendarSignature(eventId, userId, sig)) {
+      return res.status(403).send('Invalid calendar link');
+    }
+
+    const { data: event, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', eventId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!event) return res.status(404).send('Event not found');
+
+    const { data: membership } = await supabase
+      .from('event_memberships')
+      .select('id')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .is('cancelled_at', null)
+      .maybeSingle();
+    if (!membership && event.host_id !== userId) {
+      return res.status(403).send('Not authorized');
+    }
+
+    const location = [event.precise_address, event.city].filter(Boolean).join(', ');
+    const ics = buildEventIcs(event, { location });
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="alivestage-${eventId}.ics"`);
+    res.send(ics);
+  } catch (err) {
+    console.error('[events/:id/calendar.ics]', err);
+    res.status(500).send('Failed to generate calendar file');
+  }
+});
+
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { data: event, error } = await supabase

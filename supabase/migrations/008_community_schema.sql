@@ -1,4 +1,4 @@
--- AliVeStage community pivot: drop booking marketplace, create jam/community schema.
+-- Alivestage community pivot: drop booking marketplace, create jam/community schema.
 -- Clean cut — no booking data migration.
 
 -- ---------------------------------------------------------------------------

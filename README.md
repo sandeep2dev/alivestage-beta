@@ -1,4 +1,4 @@
-# AliVeStage — Community Jamming
+# Alivestage — Community Jamming
 
 Portfolio community platform for hosting and joining local jams. Built with Next.js, Express, Supabase, and Razorpay (collection-only fees).
 

@@ -2,20 +2,12 @@ const { supabase } = require('../config/supabase');
 const { createOtp, verifyOtp, normalizeEmail } = require('../services/otp');
 const { signToken } = require('../services/jwt');
 const { sendMail } = require('../services/email');
+const { otpEmailHtml } = require('../services/emailTemplates');
 const { requireAuth } = require('../middleware/auth');
 const { serializePublicProfile } = require('../services/reputation');
 const { serializeEvent } = require('../services/eventSerializer');
 
 const router = require('express').Router();
-
-function otpEmailHtml(code) {
-  return `
-    <h2>Your Alivestage sign-in code</h2>
-    <p>Use this one-time passcode to sign in or create your account:</p>
-    <p style="font-size:28px;letter-spacing:6px;font-weight:bold;">${code}</p>
-    <p>This code expires in 10 minutes. If you did not request it, you can ignore this email.</p>
-  `;
-}
 
 router.post('/send-otp', async (req, res) => {
   try {
@@ -30,7 +22,7 @@ router.post('/send-otp', async (req, res) => {
     }
     await sendMail({
       to: email,
-      subject: 'Your Alivestage sign-in code',
+      subject: 'Your Alivestage verification code',
       html: otpEmailHtml(created.code),
     });
 

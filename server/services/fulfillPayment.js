@@ -5,6 +5,7 @@ const { supabase } = require('../config/supabase');
 const { takeDraft, peekDraft } = require('./pendingOrders');
 const { serializeEvent } = require('./eventSerializer');
 const { HOST_CREATE_FEE, JOIN_FEE } = require('../config/community');
+const { notifyJoinConfirmed } = require('./joinNotifications');
 
 async function findExistingPayment(orderId) {
   const { data } = await supabase
@@ -207,6 +208,11 @@ async function fulfillJoin({ orderId, paymentId, expectedUserId = null, expected
   }
 
   const host = await loadHost(event.host_id);
+
+  notifyJoinConfirmed({ event, userId: draft.userId, host, payment }).catch((err) => {
+    console.error('[fulfillJoin] join confirmation email failed', err);
+  });
+
   return {
     ok: true,
     event: serializeEvent(event, {

@@ -16,7 +16,7 @@ function getTransporter() {
 async function sendMail({ to, subject, html }) {
   const transporter = getTransporter();
   if (!transporter) {
-    const codeMatch = String(html || '').match(/>(\d{6})</);
+    const codeMatch = String(html || '').match(/(?:^|>|\s)(\d{6})(?:<|\s|$)/);
     const hint = codeMatch ? ` | OTP: ${codeMatch[1]}` : '';
     console.log(`[email] (mock) To: ${to} | ${subject}${hint}`);
     return { mock: true };

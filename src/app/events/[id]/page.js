@@ -74,7 +74,6 @@ export default function EventDetailPage() {
         token,
         confirmPath: `/api/events/${id}/confirm-join`,
       });
-      setMessage('Joined — precise address unlocked.');
     });
   }
 

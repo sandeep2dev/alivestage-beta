@@ -1,4 +1,4 @@
-# Cursor Prompt: AliVeStage Community — Event Hosting & Jamming Flow
+# Cursor Prompt: Alivestage Community — Event Hosting & Jamming Flow
 
 Stack: Next.js + Node + Supabase (Postgres), Razorpay for payments. Optional Discord incoming webhook for Help requests only (no Discord identity/OTP).
 
