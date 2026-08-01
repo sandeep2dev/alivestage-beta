@@ -48,7 +48,7 @@ export default function AuthDrawer({ onClose, onComplete }) {
 
   return (
     <div className={styles.root} role="presentation">
-      <div className={styles.backdrop} aria-hidden="true" />
+      <button type="button" className={styles.backdrop} aria-label="Close sign in" onClick={onClose} />
       <aside
         ref={drawerRef}
         className={styles.drawer}
