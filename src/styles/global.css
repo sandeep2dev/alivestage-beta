@@ -83,6 +83,7 @@
   --page-pad-x: var(--space-lg);
   --page-pad-y: var(--space-2xl);
   --touch-min: 2.75rem;
+  --navbar-height: 4rem;
 }
 
 *,
@@ -95,6 +96,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: var(--navbar-height);
 }
 
 html,
@@ -372,6 +374,7 @@ button.input[aria-invalid="true"]:focus {
   letter-spacing: -0.02em;
   margin-bottom: var(--space-sm);
   color: var(--text-primary);
+  scroll-margin-top: var(--navbar-height);
 }
 
 .pageSubtitle {
@@ -653,6 +656,7 @@ button.input[aria-invalid="true"]:focus {
     --page-pad-y: var(--space-lg);
     --font-size-3xl: 1.625rem;
     --font-size-2xl: 1.35rem;
+    --navbar-height: 3.5rem;
   }
 
   .pageTitle {
