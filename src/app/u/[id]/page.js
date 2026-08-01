@@ -83,7 +83,7 @@ export default function PublicUserPage() {
         )}
       </section>
 
-      <Link href="/" className="btn btnSecondary">
+      <Link href="/events" className="btn btnSecondary">
         Browse feed
       </Link>
     </div>

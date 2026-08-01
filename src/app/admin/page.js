@@ -27,7 +27,7 @@ export default function AdminPage() {
     try {
       const me = await apiFetch('/api/auth/me', { token });
       if (me.profile?.role !== 'admin') {
-        router.replace('/');
+        router.replace('/events');
         return;
       }
       const [ev, us] = await Promise.all([
@@ -38,7 +38,7 @@ export default function AdminPage() {
       setUsers(us.users || []);
     } catch (err) {
       if (String(err.message || '').includes('Admin')) {
-        router.replace('/');
+        router.replace('/events');
         return;
       }
       setError(err.message);

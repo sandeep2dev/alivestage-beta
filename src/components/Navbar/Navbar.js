@@ -55,7 +55,7 @@ export default function Navbar() {
     <>
       <header className={styles.navbar}>
         <div className={`container ${styles.inner}`}>
-          <Logo variant="full" href="/" size="md" />
+          <Logo variant="full" href={profile ? '/events' : '/'} size="md" />
 
           <div className={styles.right}>
             {profile && (

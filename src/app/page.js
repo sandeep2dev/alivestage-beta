@@ -1,75 +1,39 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import FormAlert from '@/components/FormAlert/FormAlert';
-import EventCard from '@/components/EventCard/EventCard';
-import { SkeletonList } from '@/components/Skeleton/Skeleton';
-import { apiFetch } from '@/lib/api';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getAccessToken } from '@/lib/auth';
 import { useAuth } from '@/contexts/AuthContext';
+import Hero from '@/components/landing/Hero';
+import About from '@/components/landing/About';
+import HowItWorks from '@/components/landing/HowItWorks';
+import WhoItsFor from '@/components/landing/WhoItsFor';
+import Spirit from '@/components/landing/Spirit';
+import CTA from '@/components/landing/CTA';
+import FAQ from '@/components/landing/FAQ';
+import Footer from '@/components/landing/Footer';
 import styles from './page.module.css';
 
 export default function HomePage() {
-  const { openAuth } = useAuth();
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [signedIn, setSignedIn] = useState(false);
+  const router = useRouter();
+  const { sessionVersion } = useAuth();
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError('');
-      const token = getAccessToken();
-      setSignedIn(Boolean(token));
-      try {
-        const data = await apiFetch('/api/events/feed', { token: token || undefined });
-        setEvents(data.events || []);
-      } catch (err) {
-        setEvents([]);
-        setError(err.message || 'Failed to load jams');
-      } finally {
-        setLoading(false);
-      }
+    if (getAccessToken()) {
+      router.replace('/events');
     }
-    load();
-  }, []);
+  }, [router, sessionVersion]);
 
   return (
-    <div className={`container ${styles.page}`}>
-      <header className={styles.hero}>
-        <h1 className="pageTitle">Upcoming jams</h1>
-        <p className="pageSubtitle">Local sessions near you.</p>
-      </header>
-
-      <FormAlert type="error">{error}</FormAlert>
-
-      {loading ? (
-        <SkeletonList count={3} />
-      ) : events.length === 0 ? (
-        <div className={styles.empty}>
-          <p>No open jams yet.</p>
-          <div className={styles.emptyActions}>
-            {!signedIn && (
-              <button type="button" className="btn btnSecondary" onClick={() => openAuth()}>
-                Sign in
-              </button>
-            )}
-            <Link href="/events/new" className="btn btnPrimary">
-              Host a jam
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <ul className={styles.list}>
-          {events.map((event) => (
-            <li key={event.id}>
-              <EventCard event={event} variant="feed" />
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className={styles.landing}>
+      <Hero />
+      <About />
+      <HowItWorks />
+      <WhoItsFor />
+      <Spirit />
+      <CTA />
+      <FAQ />
+      <Footer />
     </div>
   );
 }

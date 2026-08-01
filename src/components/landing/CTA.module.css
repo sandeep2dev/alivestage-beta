@@ -1,0 +1,83 @@
+.section {
+  padding: clamp(3rem, 8vw, 5rem) 0;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  padding: clamp(2.5rem, 6vw, 4rem);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateY(24px) scale(0.98);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.inView .card {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.glow {
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 120%;
+  background: radial-gradient(ellipse, rgba(255, 107, 53, 0.12) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.title {
+  position: relative;
+  font-family: var(--font-display), 'Space Grotesk', sans-serif;
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin-bottom: var(--space-md);
+}
+
+.subtitle {
+  position: relative;
+  color: var(--text-secondary);
+  max-width: 28rem;
+  margin: 0 auto var(--space-xl);
+  line-height: 1.65;
+}
+
+.actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  justify-content: center;
+}
+
+.btn {
+  min-width: 9rem;
+  font-size: var(--font-size-base);
+}
+
+.btnGhost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.btnGhost:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

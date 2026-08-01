@@ -31,7 +31,7 @@ export default function OnboardingPage() {
         const data = await apiFetch('/api/auth/me', { token });
         const p = data.profile;
         if (p.onboarding_complete) {
-          router.replace('/');
+          router.replace('/events');
           return;
         }
         setForm({
@@ -65,7 +65,7 @@ export default function OnboardingPage() {
         },
       });
       if (data.accessToken) setAccessToken(data.accessToken);
-      router.push('/');
+      router.push('/events');
       router.refresh();
     } catch (err) {
       setError(err.message);

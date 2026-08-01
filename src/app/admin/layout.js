@@ -19,7 +19,7 @@ export default function AdminLayout({ children }) {
       try {
         const data = await apiFetch('/api/auth/me', { token });
         if (!data.profile || data.profile.role !== 'admin') {
-          router.replace('/');
+          router.replace('/events');
           return;
         }
         setReady(true);

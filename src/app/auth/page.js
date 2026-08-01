@@ -16,7 +16,7 @@ export default function AuthPage() {
       router.push('/admin');
       return;
     }
-    router.push('/');
+    router.push('/events');
     router.refresh();
   }
 

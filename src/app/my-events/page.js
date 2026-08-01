@@ -68,7 +68,7 @@ export default function MyEventsPage() {
   }, [load]);
 
   const browseBtn = (
-    <Link href="/" className="btn btnSecondary">
+    <Link href="/events" className="btn btnSecondary">
       Browse feed
     </Link>
   );
