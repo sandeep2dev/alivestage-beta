@@ -4,6 +4,7 @@
 const { supabase } = require('../config/supabase');
 const { refundPayment } = require('./payment');
 const { sendMail } = require('./email');
+const { jamCancelledEmailHtml } = require('./emailTemplates');
 const { serializeEvent } = require('./eventSerializer');
 const { JOIN_FEE } = require('../config/community');
 const { notifyRefundInitiated } = require('./discordActivity');
@@ -20,13 +21,12 @@ async function notifyJoinersCancelled(event, joiners) {
       await sendMail({
         to: profile.email,
         subject: `Jam cancelled: ${event.title}`,
-        html: `
-          <h2>Event cancelled</h2>
-          <p>Hi ${profile.name || 'there'},</p>
-          <p>The host cancelled <strong>${event.title}</strong> in ${event.city}.</p>
-          <p>Your ₹${JOIN_FEE} join fee has been fully refunded.</p>
-          <p><a href="${link}">View event</a></p>
-        `,
+        html: jamCancelledEmailHtml({
+          event,
+          profileName: profile.name,
+          eventUrl: link,
+          refundAmount: JOIN_FEE,
+        }),
       });
     }
   }
