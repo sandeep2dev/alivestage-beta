@@ -249,15 +249,17 @@ Deploy and confirm `https://alivestage.com` loads.
 
 ## Phase 4 — Wire CORS and URLs
 
-Your API locks CORS to `NEXT_PUBLIC_APP_URL`:
+The API allows `NEXT_PUBLIC_APP_URL` **and its www / non-www twin** (e.g. both `https://alivestage.com` and `https://www.alivestage.com`). Startup logs list the exact origins: `[server] CORS allowed origins: ...`
 
-```16:20:server/server.js
-const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-// ...
-app.use(cors({ origin: allowedOrigin, credentials: true }));
+**Important:** Vercel often redirects `alivestage.com` → `www.alivestage.com`. If users land on `www`, the browser sends `Origin: https://www.alivestage.com`. A single-origin CORS config would block that even when env vars “look the same” on paper.
+
+Optional extra origins (preview deploys, staging):
+
+```env
+CORS_ALLOWED_ORIGINS=https://staging.alivestage.com
 ```
 
-**Both services must agree:**
+**Both services must agree on URLs:**
 
 | Variable | Railway (API) | Vercel (frontend) |
 |----------|---------------|-------------------|
@@ -267,7 +269,7 @@ app.use(cors({ origin: allowedOrigin, credentials: true }));
 Rules:
 - No trailing slash
 - Use `https://`
-- If you use `www`, pick **one** canonical URL and use it everywhere
+- Pick one canonical URL for links/emails; CORS accepts both www and non-www automatically
 
 After any URL change: **redeploy both** Railway and Vercel.
 
@@ -304,9 +306,27 @@ Railway logs should show fulfillment, not `Invalid webhook signature`.
 
 ## Phase 6 — Email (OTP + notifications)
 
-OTP login and rating/join emails go through Nodemailer.
+> **Railway Hobby/Free blocks outbound SMTP** (ports 587, 465, 25). GoDaddy SMTP works on localhost but fails in production with `ETIMEDOUT` / `CONN`. Use **Resend API** on Railway; keep GoDaddy SMTP for local dev only.
 
-### Option A — Keep GoDaddy (already in `.env.example`)
+Priority in code: `RESEND_API_KEY` → SMTP → console mock.
+
+### Option A — Resend API (recommended for production)
+
+1. Sign up at [resend.com](https://resend.com)
+2. **Domains** → add `alivestage.com` → add the DNS records Resend gives you (GoDaddy DNS)
+3. Wait for domain verification (usually a few minutes)
+4. **API Keys** → create key → add to **Railway only**:
+
+```env
+RESEND_API_KEY=re_xxxxxxxx
+EMAIL_FROM=sandeep@alivestage.com
+```
+
+Do **not** set `SMTP_*` on Railway when using Resend (avoids accidental SMTP attempts).
+
+Redeploy the API service and test OTP.
+
+### Option B — GoDaddy SMTP (local dev only)
 
 ```env
 SMTP_HOST=smtpout.secureserver.net
@@ -317,26 +337,16 @@ SMTP_PASS=mailbox-password
 EMAIL_FROM=sandeep@alivestage.com
 ```
 
-### Option B — Resend (recommended for deliverability)
+### Option C — GoDaddy SMTP on Railway (not recommended)
 
-1. Verify domain at [resend.com](https://resend.com)
-2. Use:
-
-```env
-SMTP_HOST=smtp.resend.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=resend
-SMTP_PASS=re_xxxx_api_key
-EMAIL_FROM=sandeep@alivestage.com
-```
+Requires **Railway Pro** plan + redeploy. GoDaddy may still block datacenter IPs even when ports are open. Prefer Resend.
 
 ### Test OTP
 
-1. Open `https://alivestage.com/auth`
+1. Open `https://www.alivestage.com/auth`
 2. Enter your email → request OTP
 3. Confirm email arrives (not spam)
-4. If SMTP is broken, OTP only appears in Railway logs (mock mode)
+4. If no provider is configured, OTP only appears in Railway logs (mock mode)
 
 ---
 
@@ -486,10 +496,12 @@ curl -sI https://api.alivestage.com/health | grep -i x-powered-by
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `/health` shows Next.js 404 page | `api.*` domain on wrong Railway service | See section above |
-| API calls fail from browser | CORS / wrong `NEXT_PUBLIC_SERVER_URL` | Match URLs on both services, redeploy |
+| API calls fail from browser (CORS) | Browser on `www.*` but API only allowed bare domain | Redeploy API (auto www twin) or set `NEXT_PUBLIC_APP_URL=https://www.alivestage.com` on Railway + Vercel |
+| API calls fail from browser | Wrong `NEXT_PUBLIC_SERVER_URL` | Match URLs on both services, redeploy frontend |
 | Razorpay modal doesn't open | Mock mode / wrong keys | Set live keys; ensure `NEXT_PUBLIC_APP_URL` is not localhost |
 | Payment succeeds but join/create not fulfilled | Webhook misconfigured | Check URL, secret, Railway logs |
-| OTP never arrives | SMTP wrong | Fix SMTP vars; check spam; watch Railway logs |
+| OTP never arrives / `ETIMEDOUT` on SMTP | Railway blocks SMTP on Hobby; GoDaddy unreachable from cloud | Use `RESEND_API_KEY` on Railway (see Phase 6) |
+| OTP never arrives | SMTP misconfigured | Fix SMTP vars locally; use Resend in prod |
 | Event images broken in UI | Missing `NEXT_PUBLIC_SUPABASE_URL` on Vercel | Add var + **redeploy** frontend |
 | Admin page blocked | Role not promoted | Run SQL `UPDATE profiles SET role = 'admin'` |
 | Rating emails not sent | Cron only runs on API server | Ensure Railway service is always-on (not sleeping) |
