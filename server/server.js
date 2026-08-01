@@ -10,14 +10,14 @@ const eventsRouter = require('./routes/events');
 const ratingsRouter = require('./routes/ratings');
 const webhooksRouter = require('./routes/webhooks');
 const { registerCronJobs } = require('./services/cron');
+const { getAllowedOrigins, createCorsOriginChecker } = require('./config/corsOrigins');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 const { razorpayStatus } = require('./services/payment');
 const rpStatus = razorpayStatus();
 
-app.use(cors({ origin: allowedOrigin, credentials: true }));
+app.use(cors({ origin: createCorsOriginChecker(), credentials: true }));
 
 // Razorpay webhooks need the raw body for HMAC verification
 app.use(
@@ -53,6 +53,7 @@ if (!rpStatus.configured) {
 
 app.listen(PORT, () => {
   console.log(`[server] Alivestage community API listening on port ${PORT}`);
+  console.log('[server] CORS allowed origins:', getAllowedOrigins().join(', '));
   if (!rpStatus.configured) {
     console.log('[server] Razorpay: MOCK (skips payment modal)');
   } else {

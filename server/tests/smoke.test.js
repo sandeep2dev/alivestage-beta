@@ -347,3 +347,21 @@ describe('discordActivity embed builders', () => {
     if (prev) process.env.DISCORD_SIGNUP_WEBHOOK_URL = prev;
   });
 });
+
+describe('CORS allowed origins', () => {
+  const { getAllowedOrigins } = require('../config/corsOrigins');
+
+  it('includes www and non-www variants for production app URL', () => {
+    const prevApp = process.env.NEXT_PUBLIC_APP_URL;
+    const prevExtra = process.env.CORS_ALLOWED_ORIGINS;
+    process.env.NEXT_PUBLIC_APP_URL = 'https://alivestage.com';
+    delete process.env.CORS_ALLOWED_ORIGINS;
+
+    const origins = getAllowedOrigins();
+    assert.ok(origins.includes('https://alivestage.com'));
+    assert.ok(origins.includes('https://www.alivestage.com'));
+
+    process.env.NEXT_PUBLIC_APP_URL = prevApp;
+    if (prevExtra) process.env.CORS_ALLOWED_ORIGINS = prevExtra;
+  });
+});
