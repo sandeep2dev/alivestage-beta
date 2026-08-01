@@ -35,7 +35,7 @@ export default function Footer() {
               </ul>
             </div>
 
-            <div className={styles.navGroup}>
+            <div className={`${styles.navGroup} ${styles.legalNavGroup}`}>
               <h3 className={styles.navTitle}>Legal</h3>
               <ul className={styles.navList}>
                 <li><Link href="/guidelines">Community Guidelines</Link></li>
