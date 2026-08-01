@@ -126,4 +126,14 @@
   .toolBtn {
     min-height: var(--touch-min);
   }
+
+  .toolbar {
+    padding: var(--space-xs);
+    gap: var(--space-xs);
+  }
+
+  .editorContent {
+    padding: var(--space-sm);
+    min-height: 8rem;
+  }
 }

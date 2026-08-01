@@ -105,7 +105,13 @@
     border: none;
     border-top: 1px solid var(--color-border);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding: var(--space-md);
     animation: slideInUp 0.22s ease-out;
+  }
+
+  .header {
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
   }
 
   @keyframes slideInUp {

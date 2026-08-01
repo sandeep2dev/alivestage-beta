@@ -94,6 +94,8 @@
   .root {
     flex-direction: column;
     align-items: flex-start;
+    padding: var(--space-sm);
+    gap: var(--space-sm);
   }
 
   .hint {

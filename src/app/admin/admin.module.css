@@ -61,3 +61,23 @@
   color: #f87171;
   font-size: var(--font-size-sm);
 }
+
+@media (max-width: 640px) {
+  .section {
+    margin-bottom: var(--space-xl);
+  }
+
+  .table th,
+  .table td {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.8125rem;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions .btn {
+    width: 100%;
+  }
+}

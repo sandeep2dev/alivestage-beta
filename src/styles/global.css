@@ -649,8 +649,8 @@ button.input[aria-invalid="true"]:focus {
 
 @media (max-width: 640px) {
   :root {
-    --page-pad-x: 1.25rem;
-    --page-pad-y: var(--space-xl);
+    --page-pad-x: 1rem;
+    --page-pad-y: var(--space-lg);
     --font-size-3xl: 1.625rem;
     --font-size-2xl: 1.35rem;
   }
@@ -660,11 +660,37 @@ button.input[aria-invalid="true"]:focus {
   }
 
   .pageSubtitle {
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
   }
 
   .card {
     padding: var(--space-md);
+  }
+
+  form {
+    gap: var(--space-sm);
+  }
+
+  .formSection {
+    gap: var(--space-sm);
+    padding-bottom: var(--space-lg);
+    margin-bottom: var(--space-lg);
+  }
+
+  .formActions {
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
+    margin-top: var(--space-sm);
+  }
+
+  .formGrid2,
+  .formGrid3 {
+    gap: var(--space-sm);
+  }
+
+  .alert {
+    padding: var(--space-sm) var(--space-md);
+    margin-bottom: var(--space-sm);
   }
 
   .input,
@@ -672,9 +698,18 @@ button.input[aria-invalid="true"]:focus {
   .textarea {
     font-size: 1rem; /* avoid iOS zoom on focus */
     min-height: var(--touch-min);
+    padding: 0.625rem 0.75rem;
   }
 
   .textarea {
-    min-height: 6rem;
+    min-height: 5.5rem;
+  }
+
+  .btn {
+    padding: 0.625rem 1rem;
+  }
+
+  .dataCard {
+    padding: var(--space-sm) var(--space-md);
   }
 }

@@ -2,6 +2,8 @@
   position: fixed;
   inset: 0;
   z-index: 200;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .backdrop {
@@ -10,6 +12,7 @@
   border: none;
   background: rgba(0, 0, 0, 0.55);
   cursor: pointer;
+  touch-action: none;
 }
 
 .drawer {
@@ -25,6 +28,9 @@
   flex-direction: column;
   padding: var(--space-lg);
   animation: slideIn 0.2s ease-out;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes slideIn {
@@ -126,8 +132,17 @@
 
 @media (max-width: 640px) {
   .drawer {
-    width: min(360px, 100%);
-    padding: var(--space-lg);
+    width: 65vw;
+    max-width: 65vw;
+    padding: var(--space-md);
+  }
+
+  .header {
+    padding-bottom: var(--space-md);
+  }
+
+  .nav {
+    padding: var(--space-md) 0;
   }
 
   .link,

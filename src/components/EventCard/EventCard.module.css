@@ -81,6 +81,20 @@
   }
 }
 
+@media (max-width: 640px) {
+  .card {
+    padding: var(--space-md);
+  }
+
+  .title {
+    font-size: var(--font-size-lg);
+  }
+
+  .meta {
+    gap: var(--space-sm);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card {
     animation: none;

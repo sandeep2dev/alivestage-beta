@@ -19,9 +19,16 @@
 }
 
 @media (max-width: 640px) {
+  .form {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+  }
+
   .submitRow {
+    padding-top: var(--space-md);
+    margin-top: var(--space-sm);
     position: sticky;
-    bottom: var(--space-md);
+    bottom: var(--space-sm);
     background: var(--color-surface);
     padding-bottom: var(--space-sm);
   }

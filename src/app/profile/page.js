@@ -10,7 +10,7 @@ import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
 import FileUpload from '@/components/FileUpload/FileUpload';
 import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
-import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
+import ProfileHeader from '@/components/ProfileHeader/ProfileHeader';
 import styles from './profile.module.css';
 
 export default function ProfilePage() {
@@ -119,23 +119,9 @@ export default function ProfilePage() {
     );
   }
 
-  const rep = profile?.reputation_score;
-  const count = profile?.rating_count || 0;
-  const showRep = count >= 10 && rep != null;
-
   return (
     <div className={`container ${styles.page}`}>
-      <div className={styles.header}>
-        <ProfileAvatar profile={profile} size="lg" />
-        <div>
-          <h1 className="pageTitle">{profile.name || 'Profile'}</h1>
-          <p className={styles.meta}>{profile.email}</p>
-          <p className={styles.meta}>
-            Reputation:{' '}
-            {showRep ? `${rep} (${count} ratings)` : 'Not enough ratings yet'}
-          </p>
-        </div>
-      </div>
+      <ProfileHeader profile={profile} subtitle={city || profile.city || 'City not set'} />
 
       <FormAlert type="error">{error}</FormAlert>
       <FormAlert type="success">{message}</FormAlert>

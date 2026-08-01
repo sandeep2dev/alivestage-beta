@@ -69,3 +69,13 @@
   gap: var(--space-sm);
   margin-top: var(--space-md);
 }
+
+@media (max-width: 640px) {
+  .header {
+    margin-bottom: var(--space-lg);
+  }
+
+  .section {
+    margin-bottom: var(--space-xl);
+  }
+}

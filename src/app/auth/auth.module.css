@@ -27,11 +27,15 @@
 }
 
 @media (max-width: 640px) {
+  .page {
+    padding-block: var(--space-lg);
+  }
+
   .card {
     max-width: none;
   }
 
   .subtitle {
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
   }
 }

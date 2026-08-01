@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import EventCard from '@/components/EventCard/EventCard';
-import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
+import ProfileHeader from '@/components/ProfileHeader/ProfileHeader';
 import { SkeletonList } from '@/components/Skeleton/Skeleton';
 import { apiFetch } from '@/lib/api';
 import styles from './user.module.css';
@@ -51,22 +51,9 @@ export default function PublicUserPage() {
     );
   }
 
-  const rep = profile.reputation;
-
   return (
     <div className={`container ${styles.page}`}>
-      <div className={styles.header}>
-        <ProfileAvatar profile={profile} size="lg" />
-        <div>
-          <h1 className="pageTitle">{profile.name}</h1>
-          <p className={styles.meta}>{profile.city || 'City not set'}</p>
-          <p className={styles.rep}>
-            {rep?.enough
-              ? `Reputation ${rep.display} · ${rep.rating_count} ratings`
-              : 'Not enough ratings yet'}
-          </p>
-        </div>
-      </div>
+      <ProfileHeader profile={profile} />
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Jams</h2>
