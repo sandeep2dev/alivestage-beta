@@ -12,6 +12,52 @@
   margin-bottom: var(--space-md);
 }
 
+.legalNote {
+  margin-top: var(--space-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.legalNote a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legalNote a:hover {
+  color: var(--color-primary-hover);
+}
+
+.ageCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.ageCheck input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+  accent-color: var(--accent-primary);
+}
+
+.ageCheckError span {
+  color: var(--error);
+}
+
+.ageCheckMessage {
+  margin-top: calc(-1 * var(--space-md));
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--error);
+}
+
 .compact form .btnPrimary {
   width: 100%;
 }

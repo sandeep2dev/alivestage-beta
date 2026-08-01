@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
@@ -71,7 +72,10 @@ export default function HelpDialog({ open, onClose }) {
       >
         <h2 id={titleId} className={styles.title}>Need Help?</h2>
         <p className={styles.subtitle}>
-          Tell us what you need help with. We will get back to you asap.
+          Questions, bugs, or something that went wrong at a jam — send us a message and we&apos;ll
+          get back to you. To report safety concerns or misconduct, include the jam name, date, and
+          what happened. See our{' '}
+          <Link href="/guidelines">Community Guidelines</Link> for how we handle reports.
         </p>
 
         <FormAlert type="error">{error}</FormAlert>
@@ -91,7 +95,7 @@ export default function HelpDialog({ open, onClose }) {
               maxLength={2000}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Describe your issue or question..."
+              placeholder="Describe your issue — for jam reports, include the jam title and date…"
             />
           </FormField>
           <div className={styles.actions}>

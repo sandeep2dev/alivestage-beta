@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { setAccessToken } from '@/lib/auth';
@@ -20,6 +21,7 @@ export default function AuthForm({ onSuccess, compact = false }) {
   const [message, setMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [resendIn, setResendIn] = useState(0);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   useEffect(() => {
     if (step !== 'otp' || resendIn <= 0) return undefined;
@@ -36,7 +38,7 @@ export default function AuthForm({ onSuccess, compact = false }) {
   async function requestOtp(normalizedEmail) {
     await apiFetch('/api/auth/send-otp', {
       method: 'POST',
-      body: { email: normalizedEmail },
+      body: { email: normalizedEmail, ageConfirmed: true },
     });
     setEmail(normalizedEmail);
     setMessage(`We sent a 6-digit code to ${normalizedEmail}.`);
@@ -55,6 +57,12 @@ export default function AuthForm({ onSuccess, compact = false }) {
     const emailCheck = isEmail(email);
     if (!emailCheck.ok) {
       setFieldErrors({ email: emailCheck.message });
+      setLoading(false);
+      return;
+    }
+
+    if (!ageConfirmed) {
+      setFieldErrors({ ageConfirmed: 'You must confirm you are 18 or older to use Alivestage' });
       setLoading(false);
       return;
     }
@@ -124,9 +132,11 @@ export default function AuthForm({ onSuccess, compact = false }) {
     setError('');
     setFieldErrors({});
     setResendIn(0);
+    setAgeConfirmed(false);
   }
 
   const otpValid = isOtp(otp).ok;
+  const canSendOtp = ageConfirmed && !loading;
 
   return (
     <div className={compact ? styles.compact : undefined}>
@@ -152,9 +162,36 @@ export default function AuthForm({ onSuccess, compact = false }) {
               placeholder="you@example.com"
             />
           </FormField>
-          <button type="submit" className="btn btnPrimary" disabled={loading}>
+          <label className={`${styles.ageCheck} ${fieldErrors.ageConfirmed ? styles.ageCheckError : ''}`}>
+            <input
+              type="checkbox"
+              checked={ageConfirmed}
+              onChange={(e) => {
+                setAgeConfirmed(e.target.checked);
+                if (e.target.checked && fieldErrors.ageConfirmed) {
+                  setFieldErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.ageConfirmed;
+                    return next;
+                  });
+                }
+              }}
+            />
+            <span>I confirm I am 18 years of age or older</span>
+          </label>
+          {fieldErrors.ageConfirmed ? (
+            <p className={styles.ageCheckMessage} role="alert">
+              {fieldErrors.ageConfirmed}
+            </p>
+          ) : null}
+          <button type="submit" className="btn btnPrimary" disabled={!canSendOtp}>
             {loading ? 'Sending…' : 'Send OTP'}
           </button>
+          <p className={styles.legalNote}>
+            By continuing, you agree to our{' '}
+            <Link href="/terms">Terms &amp; Conditions</Link> and{' '}
+            <Link href="/privacy">Privacy Policy</Link>.
+          </p>
         </form>
       ) : (
         <form onSubmit={verifyOtp} noValidate>

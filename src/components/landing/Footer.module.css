@@ -38,6 +38,10 @@
   min-width: 7rem;
 }
 
+.legalNavGroup {
+  min-width: 10rem;
+}
+
 .navTitle {
   font-size: var(--font-size-sm);
   font-weight: 700;

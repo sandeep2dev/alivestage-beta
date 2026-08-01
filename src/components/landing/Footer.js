@@ -34,6 +34,16 @@ export default function Footer() {
                 <li><Link href="/onboarding">Get started</Link></li>
               </ul>
             </div>
+
+            <div className={`${styles.navGroup} ${styles.legalNavGroup}`}>
+              <h3 className={styles.navTitle}>Legal</h3>
+              <ul className={styles.navList}>
+                <li><Link href="/guidelines">Community Guidelines</Link></li>
+                <li><Link href="/terms">Terms &amp; Conditions</Link></li>
+                <li><Link href="/privacy">Privacy Policy</Link></li>
+                <li><Link href="/refund-policy">Refund &amp; Cancellation</Link></li>
+              </ul>
+            </div>
           </nav>
         </div>
 

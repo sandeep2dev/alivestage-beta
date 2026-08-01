@@ -84,13 +84,13 @@ export default function Hero() {
             </button>
           </div>
 
-          <div className={styles.trust}>
+          {/* <div className={styles.trust}>
             <span>₹50 to join</span>
             <span className={styles.dot} aria-hidden="true" />
             <span>₹200 to host</span>
             <span className={styles.dot} aria-hidden="true" />
             <span>Address unlocked after join</span>
-          </div>
+          </div> */}
         </div>
       </div>
 

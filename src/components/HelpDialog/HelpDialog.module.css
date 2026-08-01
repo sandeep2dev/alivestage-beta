@@ -28,7 +28,18 @@
 .subtitle {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+  line-height: 1.6;
   margin-bottom: var(--space-lg);
+}
+
+.subtitle a {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.subtitle a:hover {
+  color: var(--color-primary-hover);
 }
 
 .actions {

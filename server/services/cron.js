@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { supabase } = require('../config/supabase');
 const { sendMail } = require('./email');
+const { ratingPromptEmailHtml } = require('./emailTemplates');
 const { appUrl } = require('./cancelEvent');
 const { RATING_GRACE_HOURS } = require('../config/community');
 
@@ -62,13 +63,11 @@ async function processRatingPrompts() {
       await sendMail({
         to: profile.email,
         subject: `Rate your jam: ${event.title}`,
-        html: `
-          <h2>How was the jam?</h2>
-          <p>Hi ${profile.name || 'there'},</p>
-          <p>Please rate people you jammed with at <strong>${event.title}</strong>.</p>
-          <p><a href="${rateUrl}">Open rating page</a></p>
-          <p>The rating window closes soon.</p>
-        `,
+        html: ratingPromptEmailHtml({
+          event,
+          profileName: profile.name,
+          rateUrl,
+        }),
       });
     }
 

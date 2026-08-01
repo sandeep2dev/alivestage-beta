@@ -18,6 +18,14 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ message: 'Valid email is required' });
     }
 
+    const ageConfirmed =
+      req.body?.ageConfirmed === true || req.body?.ageConfirmed === 'true';
+    if (!ageConfirmed) {
+      return res.status(400).json({
+        message: 'You must confirm that you are 18 years of age or older',
+      });
+    }
+
     const created = await createOtp(email, { enforceCooldown: true });
     if (!created.ok) {
       return res.status(429).json({ message: created.message, retryAfterSec: created.retryAfterSec });
