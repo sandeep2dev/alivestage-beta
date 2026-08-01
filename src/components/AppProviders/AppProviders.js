@@ -1,13 +1,13 @@
 'use client';
 
 import Navbar from '@/components/Navbar/Navbar';
-import { CitiesProvider } from '@/components/CitiesProvider/CitiesProvider';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 export default function AppProviders({ children }) {
   return (
-    <CitiesProvider>
+    <AuthProvider>
       <Navbar />
       <main>{children}</main>
-    </CitiesProvider>
+    </AuthProvider>
   );
 }

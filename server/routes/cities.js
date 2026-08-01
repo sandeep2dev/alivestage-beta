@@ -1,20 +1,53 @@
-const express = require('express');
 const { supabase } = require('../config/supabase');
 
-const router = express.Router();
+const router = require('express').Router();
 
-router.get('/', async (_req, res) => {
+/** GET /api/cities?q=mum — autocomplete suggestions */
+router.get('/', async (req, res) => {
   try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 1) {
+      const { data, error } = await supabase
+        .from('cities')
+        .select('id, name, state')
+        .order('name', { ascending: true })
+        .limit(20);
+      if (error) throw error;
+      return res.json({ cities: data || [] });
+    }
+
     const { data, error } = await supabase
       .from('cities')
-      .select('id, name, state, tier')
-      .order('tier', { ascending: true })
-      .order('name', { ascending: true });
+      .select('id, name, state')
+      .ilike('name', `${q}%`)
+      .order('name', { ascending: true })
+      .limit(15);
+    if (error) throw error;
 
-    if (error) return res.status(500).json({ message: error.message });
-    res.json(data || []);
+    // Also match contains if prefix results are thin
+    let cities = data || [];
+    if (cities.length < 5) {
+      const { data: more, error: moreErr } = await supabase
+        .from('cities')
+        .select('id, name, state')
+        .ilike('name', `%${q}%`)
+        .order('name', { ascending: true })
+        .limit(15);
+      if (moreErr) throw moreErr;
+      const seen = new Set(cities.map((c) => c.id));
+      for (const c of more || []) {
+        if (!seen.has(c.id)) {
+          cities.push(c);
+          seen.add(c.id);
+        }
+      }
+      cities = cities.slice(0, 15);
+    }
+
+    res.json({ cities });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[cities]', err);
+    res.status(500).json({ message: err.message || 'Failed to search cities' });
   }
 });
 

@@ -1,169 +1,123 @@
-const express = require('express');
 const { supabase } = require('../config/supabase');
-const { requireAuth, requireRole, requireSuperadmin } = require('../middleware/auth');
-const { refundPayment, releaseTransfer, splitAmount } = require('../services/payment');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { cancelEvent } = require('../services/cancelEvent');
+const { countActiveMembersByEventIds } = require('../services/eventCapacity');
 
-const router = express.Router();
+const router = require('express').Router();
 
-router.use(requireAuth, requireRole('admin', 'superadmin'));
+router.use(requireAuth, requireAdmin);
 
-router.get('/bookings', async (_req, res) => {
+router.get('/events', async (_req, res) => {
   try {
     const { data, error } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        fan:profiles!bookings_fan_id_fkey(id, name, email),
-        artist:profiles!bookings_artist_id_fkey(id, name, email),
-        venue_city:cities!bookings_venue_city_id_fkey(id, name, state, tier),
-        payments(*)
-      `)
-      .order('created_at', { ascending: false });
+      .from('events')
+      .select('id, title, city, status, start_at, host_id, created_at, max_spots')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
 
-    if (error) return res.status(500).json({ message: error.message });
-    res.json(data);
+    const counts = await countActiveMembersByEventIds((data || []).map((e) => e.id));
+    const events = (data || []).map((event) => {
+      const memberCount = counts[event.id] ?? 0;
+      const maxSpots = Number(event.max_spots) || 0;
+      return {
+        ...event,
+        member_count: memberCount,
+        spots_remaining: Math.max(0, maxSpots - memberCount),
+        is_full: memberCount >= maxSpots,
+      };
+    });
+
+    res.json({ events });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[admin/events]', err);
+    res.status(500).json({ message: err.message || 'Failed to load events' });
   }
 });
 
-router.get('/artists', async (_req, res) => {
+router.get('/users', async (_req, res) => {
   try {
     const { data, error } = await supabase
-      .from('artist_details')
-      .select('*, profile:profiles!artist_details_id_fkey(id, name, email), city:cities!artist_details_city_id_fkey(id, name, state, tier)')
-      .order('updated_at', { ascending: false });
-
-    if (error) return res.status(500).json({ message: error.message });
-    res.json(data);
+      .from('profiles')
+      .select(
+        'id, name, email, city, role, reputation_score, rating_count, banned_at, created_at'
+      )
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    res.json({ users: data || [] });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[admin/users]', err);
+    res.status(500).json({ message: err.message || 'Failed to load users' });
   }
 });
 
-router.get('/settings', async (_req, res) => {
+/** Force-cancel an event and refund joiners (admin). */
+router.post('/events/:id/cancel', async (req, res) => {
   try {
-    const { data, error } = await supabase.from('platform_settings').select('*').eq('id', 1).single();
-    if (error) return res.status(500).json({ message: error.message });
-    res.json(data);
+    const result = await cancelEvent({
+      eventId: req.params.id,
+      actorId: req.profile.id,
+      asAdmin: true,
+    });
+    if (!result.ok) {
+      return res.status(result.status || 400).json({ message: result.message });
+    }
+    res.json({ event: result.event });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[admin/events/:id/cancel]', err);
+    res.status(500).json({ message: err.message || 'Failed to cancel event' });
   }
 });
 
-router.patch('/settings/commission', requireSuperadmin, async (req, res) => {
+/** Promote or demote a user. */
+router.post('/users/:id/role', async (req, res) => {
   try {
-    const { commissionPercentage } = req.body;
-    if (commissionPercentage == null || commissionPercentage < 0 || commissionPercentage > 100) {
-      return res.status(400).json({ message: 'Invalid commission percentage' });
+    const role = String(req.body?.role || '').trim();
+    if (!['member', 'admin'].includes(role)) {
+      return res.status(400).json({ message: 'role must be member or admin' });
+    }
+    if (req.params.id === req.profile.id && role !== 'admin') {
+      return res.status(400).json({ message: 'Cannot demote yourself' });
     }
 
-    const { data, error } = await supabase
-      .from('platform_settings')
-      .update({
-        commission_percentage: commissionPercentage,
-        updated_at: new Date().toISOString(),
-        updated_by_id: req.profile.id,
-      })
-      .eq('id', 1)
-      .select()
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .update({ role })
+      .eq('id', req.params.id)
+      .select(
+        'id, name, email, city, role, reputation_score, rating_count, banned_at, created_at'
+      )
       .single();
-
-    if (error) return res.status(500).json({ message: error.message });
-    res.json(data);
+    if (error) throw error;
+    res.json({ user });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[admin/users/:id/role]', err);
+    res.status(500).json({ message: err.message || 'Failed to update role' });
   }
 });
 
-router.patch('/artists/:id/payout-account', requireSuperadmin, async (req, res) => {
+/** Soft-ban or unban a user. */
+router.post('/users/:id/ban', async (req, res) => {
   try {
-    const { razorpayLinkedAccountId } = req.body;
-    const { data, error } = await supabase
-      .from('artist_details')
-      .update({ razorpay_linked_account_id: razorpayLinkedAccountId })
-      .eq('id', req.params.id)
-      .select()
-      .single();
-
-    if (error) return res.status(500).json({ message: error.message });
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-router.post('/bookings/:id/refund', requireSuperadmin, async (req, res) => {
-  try {
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select('*, payments(*)')
-      .eq('id', req.params.id)
-      .single();
-
-    if (!booking) return res.status(404).json({ message: 'Booking not found' });
-
-    for (const payment of booking.payments || []) {
-      if (payment.razorpay_payment_id && payment.status !== 'refunded') {
-        await refundPayment(payment.razorpay_payment_id, payment.amount_captured);
-        await supabase
-          .from('payments')
-          .update({
-            status: 'refunded',
-            processed_by_admin_id: req.profile.id,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', payment.id);
-      }
+    const banned = req.body?.banned !== false && req.body?.banned !== 'false';
+    if (req.params.id === req.profile.id) {
+      return res.status(400).json({ message: 'Cannot ban yourself' });
     }
 
-    await supabase.from('bookings').update({ status: 'rejected' }).eq('id', booking.id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-router.post('/bookings/:id/payout', requireSuperadmin, async (req, res) => {
-  try {
-    const { data: booking } = await supabase
-      .from('bookings')
-      .select('*, payments(*)')
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .update({ banned_at: banned ? new Date().toISOString() : null })
       .eq('id', req.params.id)
-      .eq('status', 'completed_by_fan')
+      .select(
+        'id, name, email, city, role, reputation_score, rating_count, banned_at, created_at'
+      )
       .single();
-
-    if (!booking) return res.status(404).json({ message: 'Booking not found or not completed' });
-
-    const paidPayments = (booking.payments || []).filter(
-      (p) => p.status === 'token_paid' || p.status === 'fully_paid'
-    );
-    const totalCaptured = paidPayments.reduce((sum, p) => sum + Number(p.amount_captured), 0);
-    const { platformCommission, artistPayout } = splitAmount(
-      totalCaptured,
-      booking.commission_rate_snapshot
-    );
-
-    for (const payment of paidPayments) {
-      if (payment.razorpay_transfer_id) {
-        await releaseTransfer(payment.razorpay_transfer_id);
-      }
-      await supabase
-        .from('payments')
-        .update({
-          status: 'released_to_artist',
-          platform_commission: platformCommission,
-          artist_payout_amount: artistPayout,
-          processed_by_admin_id: req.profile.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', payment.id);
-    }
-
-    await supabase.from('bookings').update({ status: 'settled' }).eq('id', booking.id);
-    res.json({ success: true, platformCommission, artistPayout });
+    if (error) throw error;
+    res.json({ user });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[admin/users/:id/ban]', err);
+    res.status(500).json({ message: err.message || 'Failed to update ban status' });
   }
 });
 

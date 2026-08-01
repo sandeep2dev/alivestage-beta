@@ -44,11 +44,15 @@
   }
 
   .dialog {
-    padding: var(--space-lg);
+    padding: var(--space-md);
     max-width: none;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     max-height: min(90vh, 100%);
     overflow-y: auto;
+  }
+
+  .subtitle {
+    margin-bottom: var(--space-md);
   }
 
   .actions {

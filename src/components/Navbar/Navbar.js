@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { clearAccessToken, getAccessToken } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import FanDrawer from '@/components/FanDrawer/FanDrawer';
 import HelpDialog from '@/components/HelpDialog/HelpDialog';
 import Logo from '@/components/Logo/Logo';
@@ -14,11 +15,10 @@ import styles from './Navbar.module.css';
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { openAuth, sessionVersion } = useAuth();
   const [profile, setProfile] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-
-  const isArtistDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/');
 
   useEffect(() => {
     async function load() {
@@ -38,7 +38,7 @@ export default function Navbar() {
     load();
     setDrawerOpen(false);
     setHelpOpen(false);
-  }, [pathname]);
+  }, [pathname, sessionVersion]);
 
   function handleSignOut() {
     clearAccessToken();
@@ -49,37 +49,38 @@ export default function Navbar() {
     router.refresh();
   }
 
-  const isFan = profile?.role === 'fan';
-  const isArtist = profile?.role === 'artist';
-  const isAdmin = profile && ['admin', 'superadmin'].includes(profile.role);
-
-  // Artist dashboard owns its chrome (sidebar); no top navbar there.
-  if (isArtist && isArtistDashboard) {
-    return null;
-  }
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <>
       <header className={styles.navbar}>
         <div className={`container ${styles.inner}`}>
-          <Logo variant="full" href="/" size="md" />
+          <Logo variant="full" href={profile ? '/events' : '/'} size="md" />
 
           <div className={styles.right}>
-            {!profile && (
-              <Link href="/auth" className={`btn btnPrimary ${styles.authBtn}`}>Sign In</Link>
-            )}
-
-            {isAdmin && (
-              <Link href="/admin" className={styles.link}>Admin</Link>
-            )}
-
-            {isArtist && profile && (
-              <Link href="/dashboard" className={styles.dashboardLink}>
-                Dashboard
+            {profile && (
+              <Link href="/events/new" className={`${styles.dashboardLink} ${styles.hostLink}`}>
+                Host a jam
               </Link>
             )}
 
-            {isFan && profile && (
+            {!profile && (
+              <button
+                type="button"
+                className={`btn btnPrimary ${styles.authBtn}`}
+                onClick={() => openAuth()}
+              >
+                Sign in
+              </button>
+            )}
+
+            {isAdmin && (
+              <Link href="/admin" className={styles.link}>
+                Admin
+              </Link>
+            )}
+
+            {profile && (
               <button
                 type="button"
                 className={styles.profileButton}
@@ -91,17 +92,11 @@ export default function Navbar() {
                 <ProfileAvatar profile={profile} />
               </button>
             )}
-
-            {isAdmin && !isFan && !isArtist && profile && (
-              <button type="button" className="btn btnSecondary" onClick={handleSignOut}>
-                Sign Out
-              </button>
-            )}
           </div>
         </div>
       </header>
 
-      {isFan && (
+      {profile && (
         <>
           <FanDrawer
             open={drawerOpen}

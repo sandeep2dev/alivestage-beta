@@ -1,0 +1,27 @@
+.page {
+  padding-block: var(--page-pad-y);
+}
+
+.section {
+  margin-bottom: var(--space-xl);
+}
+
+.sectionTitle {
+  font-family: var(--font-display), sans-serif;
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--space-md);
+}
+
+.list {
+  list-style: none;
+  margin: 0 0 var(--space-lg);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.empty {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-lg);
+}

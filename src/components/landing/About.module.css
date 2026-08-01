@@ -1,0 +1,109 @@
+.section {
+  padding: clamp(4rem, 10vw, 7rem) 0;
+  border-top: 1px solid var(--border);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: start;
+}
+
+.copy {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.inView .copy,
+.inView .stats {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  margin-bottom: var(--space-md);
+}
+
+.title {
+  font-family: var(--font-display), 'Space Grotesk', sans-serif;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin-bottom: var(--space-lg);
+}
+
+.body {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: var(--space-md);
+}
+
+.body:last-child {
+  margin-bottom: 0;
+}
+
+.stat {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: border-color 0.25s, transform 0.25s;
+}
+
+.stat:hover {
+  border-color: rgba(255, 107, 53, 0.35);
+  transform: translateX(4px);
+}
+
+.statValue {
+  display: block;
+  font-family: var(--font-display), 'Space Grotesk', sans-serif;
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin-bottom: var(--space-xs);
+}
+
+.statLabel {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copy,
+  .stats {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .stat:hover {
+    transform: none;
+  }
+}

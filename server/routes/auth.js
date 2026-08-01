@@ -2,18 +2,14 @@ const { supabase } = require('../config/supabase');
 const { createOtp, verifyOtp, normalizeEmail } = require('../services/otp');
 const { signToken } = require('../services/jwt');
 const { sendMail } = require('../services/email');
+const { otpEmailHtml } = require('../services/emailTemplates');
 const { requireAuth } = require('../middleware/auth');
+const { serializePublicProfile } = require('../services/reputation');
+const { serializeEvent } = require('../services/eventSerializer');
+const { countActiveMembersByEventIds } = require('../services/eventCapacity');
+const { notifySignup } = require('../services/discordActivity');
 
 const router = require('express').Router();
-
-function otpEmailHtml(code) {
-  return `
-    <h2>Your Alivestage sign-in code</h2>
-    <p>Use this one-time passcode to sign in or create your account:</p>
-    <p style="font-size:28px;letter-spacing:6px;font-weight:bold;">${code}</p>
-    <p>This code expires in 10 minutes. If you did not request it, you can ignore this email.</p>
-  `;
-}
 
 router.post('/send-otp', async (req, res) => {
   try {
@@ -22,11 +18,14 @@ router.post('/send-otp', async (req, res) => {
       return res.status(400).json({ message: 'Valid email is required' });
     }
 
-    const code = createOtp(email);
+    const created = await createOtp(email, { enforceCooldown: true });
+    if (!created.ok) {
+      return res.status(429).json({ message: created.message, retryAfterSec: created.retryAfterSec });
+    }
     await sendMail({
       to: email,
-      subject: 'Your Alivestage sign-in code',
-      html: otpEmailHtml(code),
+      subject: 'Your Alivestage verification code',
+      html: otpEmailHtml(created.code),
     });
 
     res.json({ message: 'OTP sent' });
@@ -44,7 +43,7 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ message: 'Email and OTP are required' });
     }
 
-    const result = verifyOtp(email, code);
+    const result = await verifyOtp(email, code);
     if (!result.ok) {
       return res.status(400).json({ message: result.message });
     }
@@ -61,30 +60,27 @@ router.post('/verify-otp', async (req, res) => {
       const name = email.split('@')[0];
       const { data: created, error: createError } = await supabase
         .from('profiles')
-        .insert({ email, name, role: 'fan', onboarding_complete: false })
+        .insert({
+          email,
+          name,
+          role: 'member',
+          onboarding_complete: false,
+        })
         .select('*')
         .single();
       if (createError) throw createError;
       profile = created;
+      notifySignup(profile).catch((err) => {
+        console.error('[discord] signup notify failed', err);
+      });
+    }
+
+    if (profile.banned_at) {
+      return res.status(403).json({ message: 'Account suspended', code: 'BANNED' });
     }
 
     const accessToken = signToken(profile);
-
-    let artistDetails = null;
-    if (profile.role === 'artist') {
-      const { data } = await supabase
-        .from('artist_details')
-        .select('is_onboarded')
-        .eq('id', profile.id)
-        .maybeSingle();
-      artistDetails = data;
-    }
-
-    res.json({
-      accessToken,
-      profile,
-      artistDetails,
-    });
+    res.json({ accessToken, profile });
   } catch (err) {
     console.error('[auth/verify-otp]', err);
     res.status(500).json({ message: err.message || 'Failed to verify OTP' });
@@ -92,55 +88,57 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
-  let artistDetails = null;
-  if (req.profile.role === 'artist') {
-    const { data } = await supabase
-      .from('artist_details')
-      .select('is_onboarded, bio, city_id, genres, youtube_links, min_booking_amount, hourly_rate')
-      .eq('id', req.profile.id)
-      .maybeSingle();
-    artistDetails = data;
-  }
-  res.json({ profile: req.profile, artistDetails });
+  res.json({ profile: req.profile });
 });
 
 router.patch('/profile', requireAuth, async (req, res) => {
   try {
-    if (req.profile.role !== 'fan') {
-      return res.status(403).json({ message: 'Fan profile only' });
-    }
-
     const name = String(req.body?.name || '').trim();
-    const phoneRaw = String(req.body?.phone || '').trim();
+    const city = String(req.body?.city || '').trim();
+    const pincode = String(req.body?.pincode || '').trim();
 
-    if (name.length < 2) {
-      return res.status(400).json({ message: 'Name must be at least 2 characters' });
-    }
-    if (name.length > 80) {
-      return res.status(400).json({ message: 'Name must be at most 80 characters' });
-    }
+    const updates = {};
 
-    let phone = null;
-    if (phoneRaw) {
-      const digits = phoneRaw.replace(/\D/g, '');
-      const local = digits.length === 12 && digits.startsWith('91')
-        ? digits.slice(2)
-        : digits.length === 11 && digits.startsWith('0')
-          ? digits.slice(1)
-          : digits;
-      if (!/^[6-9]\d{9}$/.test(local)) {
-        return res.status(400).json({ message: 'Enter a valid 10-digit Indian mobile number' });
+    if (name) {
+      if (name.length < 2) {
+        return res.status(400).json({ message: 'Name must be at least 2 characters' });
       }
-      phone = local;
+      if (name.length > 80) {
+        return res.status(400).json({ message: 'Name must be at most 80 characters' });
+      }
+      updates.name = name;
+    }
+
+    if (city !== undefined && req.body?.city != null) {
+      if (city.length < 2) {
+        return res.status(400).json({ message: 'City is required' });
+      }
+      updates.city = city;
+    }
+
+    if (pincode !== undefined && req.body?.pincode != null) {
+      if (!/^\d{6}$/.test(pincode)) {
+        return res.status(400).json({ message: 'Pincode must be 6 digits' });
+      }
+      updates.pincode = pincode;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: 'No valid fields to update' });
+    }
+
+    const nextCity = updates.city ?? req.profile.city;
+    const nextPin = updates.pincode ?? req.profile.pincode;
+    if (nextCity && nextPin) {
+      updates.onboarding_complete = true;
     }
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .update({ name, phone })
+      .update(updates)
       .eq('id', req.profile.id)
       .select('*')
       .single();
-
     if (error) throw error;
 
     const accessToken = signToken(profile);
@@ -151,260 +149,152 @@ router.patch('/profile', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/role', requireAuth, async (req, res) => {
+router.post('/onboarding', requireAuth, async (req, res) => {
   try {
-    const role = req.body?.role;
-    if (!['fan', 'artist'].includes(role)) {
-      return res.status(400).json({ message: 'Role must be fan or artist' });
-    }
+    const name = String(req.body?.name || '').trim();
+    const city = String(req.body?.city || '').trim();
+    const pincode = String(req.body?.pincode || '').trim();
 
-    if (req.profile.onboarding_complete) {
-      return res.status(400).json({ message: 'Role already set' });
+    if (name.length < 2) {
+      return res.status(400).json({ message: 'Name must be at least 2 characters' });
+    }
+    if (city.length < 2) {
+      return res.status(400).json({ message: 'City is required' });
+    }
+    if (!/^\d{6}$/.test(pincode)) {
+      return res.status(400).json({ message: 'Pincode must be 6 digits' });
     }
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .update({ role, onboarding_complete: true })
+      .update({
+        name,
+        city,
+        pincode,
+        onboarding_complete: true,
+      })
       .eq('id', req.profile.id)
       .select('*')
       .single();
-
     if (error) throw error;
 
-    if (role === 'artist') {
-      const { error: artistError } = await supabase
-        .from('artist_details')
-        .upsert({ id: req.profile.id });
-      if (artistError) throw artistError;
-    }
-
     const accessToken = signToken(profile);
-    res.json({ profile, accessToken });
-  } catch (err) {
-    console.error('[auth/role]', err);
-    res.status(500).json({ message: err.message || 'Failed to set role' });
-  }
-});
-
-router.post('/onboarding/step1', requireAuth, async (req, res) => {
-  try {
-    if (req.profile.role !== 'artist') {
-      return res.status(403).json({ message: 'Artist only' });
-    }
-
-    const { bio, cityId, avatarBase64, avatarFileName } = req.body || {};
-    if (!bio || !cityId) {
-      return res.status(400).json({ message: 'Bio and city are required' });
-    }
-
-    const { data: cityRow, error: cityError } = await supabase
-      .from('cities')
-      .select('id')
-      .eq('id', cityId)
-      .maybeSingle();
-    if (cityError) throw cityError;
-    if (!cityRow) {
-      return res.status(400).json({ message: 'Invalid city' });
-    }
-
-    let avatarUrl = req.profile.avatar_url || '';
-
-    if (avatarBase64 && avatarFileName) {
-      const match = avatarBase64.match(/^data:([^;]+);base64,(.+)$/);
-      const contentType = match ? match[1] : 'image/jpeg';
-      const base64Data = match ? match[2] : avatarBase64;
-      const buffer = Buffer.from(base64Data, 'base64');
-      const ext = String(avatarFileName).split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
-      const path = `${req.profile.id}/avatar.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, buffer, { upsert: true, contentType });
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      avatarUrl = data.publicUrl;
-    }
-
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ avatar_url: avatarUrl })
-      .eq('id', req.profile.id);
-    if (profileError) throw profileError;
-
-    const { error: detailsError } = await supabase.from('artist_details').upsert({
-      id: req.profile.id,
-      bio,
-      city_id: cityId,
-      updated_at: new Date().toISOString(),
+    res.json({
+      profile,
+      accessToken,
+      next: 'done',
     });
-    if (detailsError) throw detailsError;
-
-    res.json({ avatarUrl });
   } catch (err) {
-    console.error('[auth/onboarding/step1]', err);
-    res.status(500).json({ message: err.message || 'Failed to save step' });
+    console.error('[auth/onboarding]', err);
+    res.status(500).json({ message: err.message || 'Failed to save onboarding' });
   }
 });
 
-router.post('/onboarding/step2', requireAuth, async (req, res) => {
+router.get('/users/:id', async (req, res) => {
   try {
-    if (req.profile.role !== 'artist') {
-      return res.status(403).json({ message: 'Artist only' });
-    }
-
-    const genres = Array.isArray(req.body?.genres) ? req.body.genres : [];
-    const youtubeLinks = Array.isArray(req.body?.youtubeLinks)
-      ? req.body.youtubeLinks.filter((l) => String(l || '').trim())
-      : [];
-
-    const { error } = await supabase
-      .from('artist_details')
-      .update({
-        genres,
-        youtube_links: youtubeLinks,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', req.profile.id);
-    if (error) throw error;
-
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('[auth/onboarding/step2]', err);
-    res.status(500).json({ message: err.message || 'Failed to save step' });
-  }
-});
-
-router.post('/onboarding/step3', requireAuth, async (req, res) => {
-  try {
-    if (req.profile.role !== 'artist') {
-      return res.status(403).json({ message: 'Artist only' });
-    }
-
-    const minBookingAmount = Number(req.body?.minBookingAmount) || 0;
-    const hourlyRate = Number(req.body?.hourlyRate) || 0;
-
-    const { error } = await supabase
-      .from('artist_details')
-      .update({
-        min_booking_amount: minBookingAmount,
-        hourly_rate: hourlyRate,
-        is_onboarded: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', req.profile.id);
-    if (error) throw error;
-
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('[auth/onboarding/step3]', err);
-    res.status(500).json({ message: err.message || 'Failed to complete onboarding' });
-  }
-});
-
-router.patch('/artist-settings', requireAuth, async (req, res) => {
-  try {
-    if (req.profile.role !== 'artist') {
-      return res.status(403).json({ message: 'Artist only' });
-    }
-
-    const {
-      bio,
-      cityId,
-      avatarBase64,
-      avatarFileName,
-      genres,
-      youtubeLinks,
-      minBookingAmount,
-      hourlyRate,
-    } = req.body || {};
-
-    if (!bio || String(bio).trim().length < 20) {
-      return res.status(400).json({ message: 'Bio must be at least 20 characters' });
-    }
-    if (String(bio).trim().length > 1000) {
-      return res.status(400).json({ message: 'Bio must be at most 1000 characters' });
-    }
-    if (!cityId) {
-      return res.status(400).json({ message: 'City is required' });
-    }
-
-    const genreList = Array.isArray(genres) ? genres : [];
-    if (genreList.length < 1) {
-      return res.status(400).json({ message: 'Select at least one genre' });
-    }
-
-    const links = Array.isArray(youtubeLinks)
-      ? youtubeLinks.map((l) => String(l || '').trim()).filter(Boolean)
-      : [];
-
-    const minAmount = Number(minBookingAmount);
-    const rate = Number(hourlyRate);
-    if (!Number.isFinite(minAmount) || minAmount < 1) {
-      return res.status(400).json({ message: 'Invalid minimum booking amount' });
-    }
-    if (!Number.isFinite(rate) || rate < 1) {
-      return res.status(400).json({ message: 'Invalid hourly rate' });
-    }
-
-    const { data: cityRow, error: cityError } = await supabase
-      .from('cities')
-      .select('id')
-      .eq('id', cityId)
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', req.params.id)
       .maybeSingle();
-    if (cityError) throw cityError;
-    if (!cityRow) {
-      return res.status(400).json({ message: 'Invalid city' });
+    if (error) throw error;
+    if (!profile) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ profile: serializePublicProfile(profile) });
+  } catch (err) {
+    console.error('[auth/users/:id]', err);
+    res.status(500).json({ message: err.message || 'Failed to load profile' });
+  }
+});
+
+router.get('/users/:id/events', async (req, res) => {
+  try {
+    const { data: events, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('host_id', req.params.id)
+      .in('status', ['created', 'live', 'completed'])
+      .order('start_at', { ascending: false })
+      .limit(12);
+    if (error) throw error;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, name, city, avatar_url, reputation_score, rating_count')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    const counts = await countActiveMembersByEventIds((events || []).map((e) => e.id));
+
+    res.json({
+      events: (events || []).map((event) =>
+        serializeEvent(event, {
+          viewerId: null,
+          isMember: false,
+          hostProfile: profile,
+          memberCount: counts[event.id] ?? 0,
+        })
+      ),
+    });
+  } catch (err) {
+    console.error('[auth/users/:id/events]', err);
+    res.status(500).json({ message: err.message || 'Failed to load jams' });
+  }
+});
+
+/** Upload avatar (base64 JPEG/PNG/WebP) → Supabase Storage `avatars` bucket. */
+router.post('/avatar', requireAuth, async (req, res) => {
+  try {
+    const base64 = String(req.body?.base64 || '');
+    const contentType = String(req.body?.contentType || 'image/jpeg').toLowerCase();
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(contentType)) {
+      return res.status(400).json({ message: 'Unsupported image type' });
     }
 
-    let avatarUrl = req.profile.avatar_url || '';
-
-    if (avatarBase64 && avatarFileName) {
-      const match = avatarBase64.match(/^data:([^;]+);base64,(.+)$/);
-      const contentType = match ? match[1] : 'image/jpeg';
-      const base64Data = match ? match[2] : avatarBase64;
-      const buffer = Buffer.from(base64Data, 'base64');
-      const ext = String(avatarFileName).split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '') || 'jpg';
-      const path = `${req.profile.id}/avatar.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, buffer, { upsert: true, contentType });
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      avatarUrl = `${data.publicUrl}?t=${Date.now()}`;
+    const match = base64.match(/^data:([^;]+);base64,(.+)$/);
+    const raw = match ? match[2] : base64.replace(/\s/g, '');
+    if (!raw || raw.length < 32) {
+      return res.status(400).json({ message: 'Image data is required' });
     }
 
-    const { data: profile, error: profileError } = await supabase
+    const buffer = Buffer.from(raw, 'base64');
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ message: 'Image must be under 5MB' });
+    }
+
+    const ext =
+      contentType === 'image/png'
+        ? 'png'
+        : contentType === 'image/webp'
+          ? 'webp'
+          : contentType === 'image/gif'
+            ? 'gif'
+            : 'jpg';
+    const path = `${req.profile.id}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, buffer, { contentType, upsert: true });
+    if (uploadError) throw uploadError;
+
+    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+    const avatarUrl = `${pub.publicUrl}?t=${Date.now()}`;
+
+    const { data: profile, error } = await supabase
       .from('profiles')
       .update({ avatar_url: avatarUrl })
       .eq('id', req.profile.id)
       .select('*')
       .single();
-    if (profileError) throw profileError;
-
-    const { data: artistDetails, error: detailsError } = await supabase
-      .from('artist_details')
-      .update({
-        bio: String(bio).trim(),
-        city_id: cityId,
-        genres: genreList,
-        youtube_links: links,
-        min_booking_amount: minAmount,
-        hourly_rate: rate,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', req.profile.id)
-      .select('is_onboarded, bio, city_id, genres, youtube_links, min_booking_amount, hourly_rate')
-      .single();
-    if (detailsError) throw detailsError;
+    if (error) throw error;
 
     const accessToken = signToken(profile);
-    res.json({ profile, artistDetails, accessToken });
+    res.json({ profile, accessToken, avatar_url: avatarUrl });
   } catch (err) {
-    console.error('[auth/artist-settings]', err);
-    res.status(500).json({ message: err.message || 'Failed to update settings' });
+    console.error('[auth/avatar]', err);
+    res.status(500).json({ message: err.message || 'Failed to upload avatar' });
   }
 });
 

@@ -93,11 +93,30 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   min-height: 100%;
   color-scheme: dark;
   overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Razorpay Checkout inherits color-scheme:dark and paints an opaque white
+   iframe backdrop. Force light so the modal keeps a translucent overlay. */
+.razorpay-container,
+.razorpay-container *,
+iframe.razorpay-checkout-frame,
+iframe[src*='razorpay'] {
+  color-scheme: light !important;
 }
 
 body {
@@ -169,6 +188,12 @@ button {
 .btnPrimary {
   background: var(--accent-primary);
   color: #16171C;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 .btnPrimary:hover:not(:disabled) {
@@ -282,7 +307,8 @@ button {
 .textarea.inputError,
 .input[aria-invalid="true"],
 .select[aria-invalid="true"],
-.textarea[aria-invalid="true"] {
+.textarea[aria-invalid="true"],
+button.input[aria-invalid="true"] {
   border-color: var(--error);
 }
 
@@ -291,7 +317,8 @@ button {
 .textarea.inputError:focus,
 .input[aria-invalid="true"]:focus,
 .select[aria-invalid="true"]:focus,
-.textarea[aria-invalid="true"]:focus {
+.textarea[aria-invalid="true"]:focus,
+button.input[aria-invalid="true"]:focus {
   border-color: var(--error);
   box-shadow: 0 0 0 3px rgba(229, 72, 77, 0.22);
 }
@@ -318,10 +345,6 @@ button {
   font-weight: 600;
   margin-bottom: var(--space-xs);
   color: var(--text-secondary);
-}
-
-.formGroup {
-  margin-bottom: 0;
 }
 
 .formSection .formGroup,
@@ -626,8 +649,8 @@ button {
 
 @media (max-width: 640px) {
   :root {
-    --page-pad-x: 1.25rem;
-    --page-pad-y: var(--space-xl);
+    --page-pad-x: 1rem;
+    --page-pad-y: var(--space-lg);
     --font-size-3xl: 1.625rem;
     --font-size-2xl: 1.35rem;
   }
@@ -637,11 +660,37 @@ button {
   }
 
   .pageSubtitle {
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
   }
 
   .card {
     padding: var(--space-md);
+  }
+
+  form {
+    gap: var(--space-sm);
+  }
+
+  .formSection {
+    gap: var(--space-sm);
+    padding-bottom: var(--space-lg);
+    margin-bottom: var(--space-lg);
+  }
+
+  .formActions {
+    gap: var(--space-sm);
+    padding-top: var(--space-md);
+    margin-top: var(--space-sm);
+  }
+
+  .formGrid2,
+  .formGrid3 {
+    gap: var(--space-sm);
+  }
+
+  .alert {
+    padding: var(--space-sm) var(--space-md);
+    margin-bottom: var(--space-sm);
   }
 
   .input,
@@ -649,9 +698,18 @@ button {
   .textarea {
     font-size: 1rem; /* avoid iOS zoom on focus */
     min-height: var(--touch-min);
+    padding: 0.625rem 0.75rem;
   }
 
   .textarea {
-    min-height: 6rem;
+    min-height: 5.5rem;
+  }
+
+  .btn {
+    padding: 0.625rem 1rem;
+  }
+
+  .dataCard {
+    padding: var(--space-sm) var(--space-md);
   }
 }

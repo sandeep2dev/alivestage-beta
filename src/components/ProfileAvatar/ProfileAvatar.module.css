@@ -32,3 +32,9 @@
   height: 3rem;
   font-size: 0.95rem;
 }
+
+.xl {
+  width: 4rem;
+  height: 4rem;
+  font-size: 1.125rem;
+}

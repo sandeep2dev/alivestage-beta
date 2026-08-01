@@ -19,12 +19,23 @@
   width: 100%;
 }
 
+.fallbackHint {
+  margin-top: var(--space-lg);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
 @media (max-width: 640px) {
+  .page {
+    padding-block: var(--space-lg);
+  }
+
   .card {
     max-width: none;
   }
 
   .subtitle {
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
   }
 }

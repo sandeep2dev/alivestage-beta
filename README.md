@@ -1,98 +1,91 @@
-# Alivestage Platform
+# Alivestage — Community Jamming
 
-Secure two-sided marketplace connecting fans with live performance artists. Built with Next.js, Supabase, and Razorpay escrow.
+Portfolio community platform for hosting and joining local jams. Built with Next.js, Express, Supabase, and Razorpay (collection-only fees).
+
+## Model
+
+- **Identity:** Email OTP for session login + city/pincode onboarding.
+- **Browse:** Public feed and event summaries; `precise_address` only after paid join (server-side serializer).
+- **Host create:** ₹200 fee → event published (`created`). Host fee is never refunded on cancel.
+- **Join:** ₹50 fee → membership + precise address unlocked.
+- **Host cancel:** full ₹50 refund to joiners; soft-delete memberships.
+- **Joiner leave:** 50% refund (₹25); soft-delete membership.
+- **Attendance:** host marks attended; self-present is informational only.
+- **Ratings:** after host marks `completed`; prompts after `end_at` + 36h grace; window 5 days; reputation shown publicly at 10+ ratings.
+- **Help:** sidebar Help posts to an optional Discord incoming webhook (`DISCORD_SUPPORT_WEBHOOK_URL`).
 
 ## Stack
 
-- **Frontend:** Next.js App Router, CSS Modules, global design tokens
-- **Backend:** Node.js Express (`server/`)
-- **Database & Storage:** Supabase PostgreSQL + Storage (avatars)
-- **Auth:** Email OTP (custom, via Express + SMTP)
-- **Payments:** Razorpay Route (fund holds)
+- Next.js (App Router) + Express API
+- Supabase Postgres + storage (avatars)
+- Razorpay orders/refunds + optional webhooks (no Route/escrow)
 
 ## Setup
 
-1. Copy environment variables:
-   ```bash
-   cp .env.example .env.local
-   ```
+1. Copy `.env.example` → `.env.local` and fill Supabase + `JWT_SECRET`.
+2. Apply migrations (`supabase/migrations`), including `008_community_schema.sql`, `009` (if needed), and `010_hardening.sql` (OTP/pending orders, cities, soft-ban).
+3. Optional: Razorpay keys (otherwise payments run in mock mode).
+4. Optional: `RAZORPAY_WEBHOOK_SECRET` and point Razorpay to `POST {SERVER}/api/webhooks/razorpay` for `payment.captured`.
+5. Optional: `DISCORD_SUPPORT_WEBHOOK_URL` for Help requests.
+6. `npm install && npm run dev`
+7. Promote an admin after first sign-in:
 
-2. Create a Supabase project, then fill in `.env.local`:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY` (use the **service_role** key, not anon)
-   - `JWT_SECRET`
-   - SMTP credentials (OTP emails use Nodemailer; leave `SMTP_HOST` empty to log OTP codes in the API console)
-   - `DISCORD_SUPPORT_WEBHOOK_URL` (optional; fan Help messages post here, otherwise logged in the API console)
+```sql
+UPDATE profiles SET role = 'admin', onboarding_complete = true WHERE email = 'your@email.com';
+```
 
-3. Apply database migrations with the Supabase CLI (preferred — do not paste SQL by hand):
-   ```bash
-   npm install -D supabase
-   npx supabase login
-   npx supabase init                    # creates config.toml; keeps existing supabase/migrations/
-   npx supabase link --project-ref YOUR_PROJECT_REF
-   npx supabase db push
-   ```
+## Demo seed data
 
-   `YOUR_PROJECT_REF` is the id in your project URL: `https://YOUR_PROJECT_REF.supabase.co`.
+Populate hosts, fans, and past/live/upcoming jams with joiners:
 
-   This applies pending files in `supabase/migrations/` in order (e.g. `001`, then `002`). Supabase tracks what already ran, so re-running `db push` only applies new migrations.
+```bash
+npm run seed:demo
+```
 
-   **Note:** Do not set `SUPABASE_DB` or `SUPABASE_DB_PASSWORD` in `.env.local`. The CLI loads dotenv and those names override `[db]` in `config.toml`, which causes `Missing required field in config: db.port`.
-
-4. Artist avatars use Supabase Storage. Migration `004_avatars_bucket.sql` creates the public `avatars` bucket (included when you `db push`).
-
-5. Promote a user to superadmin (after they sign in once via OTP):
-   ```sql
-   UPDATE profiles SET role = 'superadmin', onboarding_complete = true WHERE email = 'your@email.com';
-   ```
-
-6. Install and run:
-   ```bash
-   npm install
-   npm run dev
-   ```
-
-   - Frontend: http://localhost:3000
-   - API server: http://localhost:5001
-
-## Database migrations
-
-Migrations live in `supabase/migrations/` and are the source of truth for schema changes.
-
-| Approach | When to use |
-|----------|-------------|
-| `npx supabase db push` | Normal workflow |
-| SQL Editor paste | One-off / emergency only |
-
-When you change the schema later:
-
-1. Add a **new** file, e.g. `supabase/migrations/003_add_something.sql`  
-   (do not edit old migrations that already ran in production)
-2. Push it:
-   ```bash
-   npx supabase db push
-   ```
-
-You only need to run this when there are new migration files — not for every app code change.
+Uses `@yopmail.com` addresses (see script output). Re-running clears previous seed events tagged `[seed-demo]` and recreates them. Sign in via `/auth` OTP; if SMTP is unset, the code is printed in the API console.
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Next.js + Express concurrently |
-| `npm run build` | Build Next.js for production |
-| `node scripts/test-integration.js` | Run smoke tests |
-| `npx supabase db push` | Apply pending migrations to the linked Supabase project |
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Next (3000) + Express (5001) |
+| `npm run build` / `npm start` | Production Next frontend |
+| `npm run start:server` | Production Express API |
+| `npm test` | Smoke tests (payment signatures + address ACL) |
 
-## User Roles
+## API surface
 
-| Role | Capabilities |
-|------|-------------|
-| Fan | Browse artists, book gigs, pay token/balance, mark complete |
-| Artist | Onboard portfolio, accept/reject bookings |
-| Admin | Read-only system audit |
-| Superadmin | Refunds, payouts, commission settings |
+- `/api/auth` — email OTP, onboarding, profile, avatar upload, public profiles
+- `/api/events` — feed, pay-then-create, join, edit, cancel/leave, attendance, complete
+- `/api/ratings` — eligible targets + submit
+- `/api/cities` — city autocomplete
+- `/api/support` — Help → Discord webhook
+- `/api/admin` — events/users, force-cancel, promote/demote, soft-ban
+- `/api/webhooks/razorpay` — payment.captured fulfillment
 
-## Project Structure
+## Deploy
 
-See TRD §6 for full directory layout.
+The app is two processes: **Next.js** (UI) and **Express** (API). They share `.env` values for Supabase, JWT, and Razorpay.
+
+### Suggested layout
+
+1. **Frontend (Vercel)**  
+   - Root directory: repo root  
+   - Build: `npm run build`  
+   - Output: Next default  
+   - Env: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SERVER_URL` (public API URL)
+
+2. **API (Railway / Render / Fly)**  
+   - Start: `npm run start:server`  
+   - Env: `PORT`, `JWT_SECRET`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL`, Razorpay + SMTP as needed  
+   - Health check: `GET /health`
+
+3. **Database**  
+   - Hosted Supabase project; push migrations with `npx supabase db push` (do not set `SUPABASE_DB` / `SUPABASE_DB_PASSWORD` locally if that breaks the CLI).
+
+4. **Razorpay webhooks**  
+   - URL: `https://<api-host>/api/webhooks/razorpay`  
+   - Events: `payment.captured` (and optionally `payment.authorized`)  
+   - Set `RAZORPAY_WEBHOOK_SECRET` to the dashboard signing secret.
+
+CORS is locked to `NEXT_PUBLIC_APP_URL`, so the frontend origin must match that value in production.

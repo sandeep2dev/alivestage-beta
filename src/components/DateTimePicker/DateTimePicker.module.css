@@ -1,0 +1,208 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.triggerOpen {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
+}
+
+.placeholder {
+  color: var(--text-muted);
+}
+
+.icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  line-height: 0;
+}
+
+.hiddenNative {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.popover {
+  position: fixed;
+  z-index: 100;
+  width: 260px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: visible;
+}
+
+.popoverMeasuring {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.popoverReady {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 26px 1fr 26px 26px;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.monthLabel {
+  grid-column: 2;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.01em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.navBtn,
+.closeBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.closeBtn {
+  grid-column: 4;
+  font-size: 18px;
+}
+
+.navBtn:hover,
+.navBtn:focus-visible,
+.closeBtn:hover,
+.closeBtn:focus-visible {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
+.weekdays,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+}
+
+.weekdays {
+  margin-bottom: 2px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  padding: 2px 0;
+}
+
+.dayBtn,
+.dayEmpty {
+  height: 26px;
+}
+
+.dayEmpty {
+  visibility: hidden;
+}
+
+.dayBtn {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dayBtn:hover:not(:disabled),
+.dayBtn:focus-visible:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  outline: none;
+}
+
+.dayToday {
+  box-shadow: inset 0 0 0 1px var(--accent-secondary);
+}
+
+.daySelected {
+  background: var(--accent-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.daySelected:hover:not(:disabled),
+.daySelected:focus-visible:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.dayDisabled {
+  color: var(--text-muted);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.timeRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) 72px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.timeSep {
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.timeSelect {
+  width: 100%;
+  min-width: 0;
+  min-height: 0 !important;
+  height: 38px;
+  padding: 8px 28px 8px 10px;
+  font-size: 14px;
+  line-height: 20px;
+  background-position: right 8px center;
+  background-size: 14px;
+}
+
+.timePeriod {
+  padding-right: 28px;
+}

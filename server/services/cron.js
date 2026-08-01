@@ -1,108 +1,98 @@
 const cron = require('node-cron');
 const { supabase } = require('../config/supabase');
-const { refundPayment } = require('./payment');
-const { sendMail, bookingAutoRejectedHtml, bookingCancelledHtml } = require('./email');
+const { sendMail } = require('./email');
+const { appUrl } = require('./cancelEvent');
+const { RATING_GRACE_HOURS } = require('../config/community');
 
-async function processExpiredPendingBookings() {
-  const now = new Date().toISOString();
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('*, fan:profiles!bookings_fan_id_fkey(email, name), artist:profiles!bookings_artist_id_fkey(name)')
-    .eq('status', 'pending')
-    .lt('artist_response_deadline', now);
+/**
+ * After end_at + grace, once per completed event: prompt attended members to rate.
+ */
+async function processRatingPrompts() {
+  const graceCutoff = new Date(
+    Date.now() - RATING_GRACE_HOURS * 60 * 60 * 1000
+  ).toISOString();
 
-  for (const booking of bookings || []) {
-    const { data: tokenPayment } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('booking_id', booking.id)
-      .eq('payment_type', 'token')
-      .single();
+  const { data: events, error } = await supabase
+    .from('events')
+    .select('*')
+    .eq('status', 'completed')
+    .is('rating_prompts_sent_at', null)
+    .lt('end_at', graceCutoff)
+    .not('rating_window_closes_at', 'is', null);
 
-    if (tokenPayment?.razorpay_payment_id) {
-      await refundPayment(tokenPayment.razorpay_payment_id, tokenPayment.amount_captured);
+  if (error) throw error;
+
+  for (const event of events || []) {
+    if (
+      event.rating_window_closes_at &&
+      new Date(event.rating_window_closes_at).getTime() < Date.now()
+    ) {
       await supabase
-        .from('payments')
-        .update({ status: 'refunded', updated_at: now })
-        .eq('id', tokenPayment.id);
+        .from('events')
+        .update({ rating_prompts_sent_at: new Date().toISOString() })
+        .eq('id', event.id);
+      continue;
     }
 
-    await supabase.from('bookings').update({ status: 'rejected' }).eq('id', booking.id);
+    const { data: memberships } = await supabase
+      .from('event_memberships')
+      .select(
+        'user_id, profile:profiles!event_memberships_user_id_fkey(id, email, name)'
+      )
+      .eq('event_id', event.id)
+      .is('cancelled_at', null)
+      .eq('host_marked_attended', true);
 
-    if (booking.fan?.email) {
-      await sendMail({
-        to: booking.fan.email,
-        subject: 'Booking request expired — refund issued',
-        html: bookingAutoRejectedHtml({ fanName: booking.fan.name }),
-      });
-    }
-    console.log('[cron] Auto-rejected booking', booking.id);
-  }
-}
-
-async function processUnpaidBalanceBookings() {
-  const now = new Date().toISOString();
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('*, fan:profiles!bookings_fan_id_fkey(email, name), artist:profiles!bookings_artist_id_fkey(name, id)')
-    .eq('status', 'confirmed')
-    .lt('balance_due_deadline', now);
-
-  for (const booking of bookings || []) {
-    const { data: balancePayment } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('booking_id', booking.id)
-      .eq('payment_type', 'balance')
-      .eq('status', 'fully_paid')
+    const { data: host } = await supabase
+      .from('profiles')
+      .select('id, email, name')
+      .eq('id', event.host_id)
       .maybeSingle();
 
-    if (balancePayment) continue;
+    const recipients = [...(memberships || []).map((m) => m.profile), host].filter(Boolean);
+    const seen = new Set();
+    const rateUrl = `${appUrl()}/events/${event.id}/rate`;
 
-    const { data: tokenPayment } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('booking_id', booking.id)
-      .eq('payment_type', 'token')
-      .single();
+    for (const profile of recipients) {
+      if (!profile?.id || seen.has(profile.id)) continue;
+      seen.add(profile.id);
 
-    if (tokenPayment) {
-      await supabase
-        .from('payments')
-        .update({
-          status: 'released_to_artist',
-          artist_payout_amount: tokenPayment.amount_captured,
-          updated_at: now,
-        })
-        .eq('id', tokenPayment.id);
-    }
+      if (!profile.email) continue;
 
-    await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', booking.id);
-
-    if (booking.fan?.email) {
       await sendMail({
-        to: booking.fan.email,
-        subject: 'Booking cancelled — balance not paid',
-        html: bookingCancelledHtml({
-          fanName: booking.fan.name,
-          reason: 'The remaining balance was not paid 48 hours before the event. The token has been transferred to the artist as a cancellation fee.',
-        }),
+        to: profile.email,
+        subject: `Rate your jam: ${event.title}`,
+        html: `
+          <h2>How was the jam?</h2>
+          <p>Hi ${profile.name || 'there'},</p>
+          <p>Please rate people you jammed with at <strong>${event.title}</strong>.</p>
+          <p><a href="${rateUrl}">Open rating page</a></p>
+          <p>The rating window closes soon.</p>
+        `,
       });
     }
-    console.log('[cron] Cancelled unpaid balance booking', booking.id);
+
+    await supabase
+      .from('events')
+      .update({ rating_prompts_sent_at: new Date().toISOString() })
+      .eq('id', event.id);
+
+    console.log('[cron] Rating prompts sent for event', event.id);
   }
 }
 
 function registerCronJobs() {
   cron.schedule('0 * * * *', async () => {
     try {
-      await processExpiredPendingBookings();
-      await processUnpaidBalanceBookings();
+      await processRatingPrompts();
     } catch (err) {
-      console.error('[cron] Job failed', err);
+      console.error('[cron] Rating prompt job failed', err);
     }
   });
-  console.log('[cron] Registered hourly edge-case jobs');
+  console.log('[cron] Registered hourly rating-prompt jobs');
 }
 
-module.exports = { registerCronJobs, processExpiredPendingBookings, processUnpaidBalanceBookings };
+module.exports = {
+  registerCronJobs,
+  processRatingPrompts,
+};

@@ -1,0 +1,23 @@
+.title {
+  font-family: var(--font-display), sans-serif;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  margin: 0 0 var(--space-sm);
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-lg);
+}
+
+form .btnPrimary {
+  width: 100%;
+  margin-top: var(--space-sm);
+}
+
+@media (max-width: 640px) {
+  .subtitle {
+    margin-bottom: var(--space-md);
+  }
+}

@@ -4,22 +4,28 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken, setAccessToken } from '@/lib/auth';
-import { isPhone, lengthBetween } from '@/lib/validators';
+import { lengthBetween } from '@/lib/validators';
+import { imageToUploadPayload } from '@/lib/image';
 import FormAlert from '@/components/FormAlert/FormAlert';
 import FormField from '@/components/FormField/FormField';
-import ProfileAvatar from '@/components/ProfileAvatar/ProfileAvatar';
+import FileUpload from '@/components/FileUpload/FileUpload';
+import CityAutocomplete from '@/components/CityAutocomplete/CityAutocomplete';
+import ProfileHeader from '@/components/ProfileHeader/ProfileHeader';
 import styles from './profile.module.css';
 
-export default function FanProfilePage() {
+export default function ProfilePage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [profile, setProfile] = useState(null);
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [city, setCity] = useState('');
+  const [pincode, setPincode] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarFileName, setAvatarFileName] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -30,13 +36,10 @@ export default function FanProfilePage() {
       }
       try {
         const data = await apiFetch('/api/auth/me', { token });
-        if (data.profile?.role !== 'fan') {
-          router.replace('/');
-          return;
-        }
         setProfile(data.profile);
         setName(data.profile.name || '');
-        setPhone(data.profile.phone || '');
+        setCity(data.profile.city || '');
+        setPincode(data.profile.pincode || '');
         setReady(true);
       } catch {
         router.replace('/auth');
@@ -45,6 +48,31 @@ export default function FanProfilePage() {
     load();
   }, [router]);
 
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError('');
+    setMessage('');
+    setAvatarBusy(true);
+    setAvatarFileName(file.name);
+    try {
+      const payload = await imageToUploadPayload(file);
+      const token = getAccessToken();
+      const data = await apiFetch('/api/auth/avatar', {
+        method: 'POST',
+        token,
+        body: payload,
+      });
+      if (data.accessToken) setAccessToken(data.accessToken);
+      setProfile(data.profile);
+      setMessage('Photo updated.');
+    } catch (err) {
+      setError(err.message || 'Failed to upload photo');
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
@@ -52,10 +80,10 @@ export default function FanProfilePage() {
     setFieldErrors({});
 
     const nameCheck = lengthBetween(name, { min: 2, max: 80, label: 'Name' });
-    const phoneCheck = isPhone(phone);
     const errors = {};
     if (!nameCheck.ok) errors.name = nameCheck.message;
-    if (!phoneCheck.ok) errors.phone = phoneCheck.message;
+    if (city.trim().length < 2) errors.city = 'City is required';
+    if (!/^\d{6}$/.test(pincode)) errors.pincode = 'Pincode must be 6 digits';
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
       return;
@@ -69,13 +97,12 @@ export default function FanProfilePage() {
         token,
         body: {
           name: nameCheck.value,
-          phone: phoneCheck.value,
+          city: city.trim(),
+          pincode,
         },
       });
       if (data.accessToken) setAccessToken(data.accessToken);
       setProfile(data.profile);
-      setName(data.profile.name || '');
-      setPhone(data.profile.phone || '');
       setMessage('Profile updated.');
     } catch (err) {
       setError(err.message);
@@ -85,60 +112,54 @@ export default function FanProfilePage() {
   }
 
   if (!ready) {
-    return <div className="container"><p>Loading...</p></div>;
+    return (
+      <div className={`container ${styles.page}`}>
+        <p>Loading…</p>
+      </div>
+    );
   }
 
   return (
     <div className={`container ${styles.page}`}>
-      <div className={`card ${styles.card}`}>
-        <div className={styles.header}>
-          <ProfileAvatar profile={profile} size="lg" />
-          <div>
-            <h1 className="pageTitle">Profile</h1>
-            <p className={styles.subtitle}>Update your account details</p>
-          </div>
-        </div>
+      <ProfileHeader profile={profile} subtitle={city || profile.city || 'City not set'} />
 
-        <FormAlert type="error">{error}</FormAlert>
-        <FormAlert type="success">{message}</FormAlert>
+      <FormAlert type="error">{error}</FormAlert>
+      <FormAlert type="success">{message}</FormAlert>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <FormField id="email" label="Email" hint="Email cannot be changed">
-            <input id="email" className="input" value={profile.email || ''} disabled readOnly />
-          </FormField>
-
-          <FormField id="name" label="Full name" required error={fieldErrors.name}>
-            <input
-              className="input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-              maxLength={80}
-            />
-          </FormField>
-
-          <FormField
-            id="phone"
-            label="Contact number"
-            error={fieldErrors.phone}
-            hint="Optional. 10-digit Indian mobile number"
-          >
-            <input
-              className="input"
-              type="tel"
-              inputMode="numeric"
-              autoComplete="tel"
-              placeholder="9876543210"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </FormField>
-
-          <button type="submit" className="btn btnPrimary" disabled={loading}>
-            {loading ? 'Saving...' : 'Save changes'}
-          </button>
-        </form>
+      <div className={`card ${styles.avatarCard}`}>
+        <FileUpload
+          id="avatar"
+          label={avatarBusy ? 'Uploading…' : 'Upload photo'}
+          hint="JPEG, PNG, or WebP — max ~5MB"
+          fileName={avatarFileName}
+          previewSrc={profile.avatar_url || ''}
+          previewAlt={profile.name || 'Avatar'}
+          onChange={handleAvatarChange}
+        />
       </div>
+
+      <form className={`card ${styles.form}`} onSubmit={handleSubmit} noValidate>
+        <FormField id="name" label="Display name" required error={fieldErrors.name}>
+          <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+        </FormField>
+        <FormField id="city" label="City" required error={fieldErrors.city}>
+          <CityAutocomplete id="city" value={city} onChange={setCity} required />
+        </FormField>
+        <FormField id="pincode" label="Pincode" required error={fieldErrors.pincode}>
+          <input
+            className="input"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            inputMode="numeric"
+          />
+        </FormField>
+        <FormField id="email" label="Email" hint="Verified via email OTP at sign-in">
+          <input className="input" value={profile.email || ''} disabled />
+        </FormField>
+        <button type="submit" className="btn btnPrimary" disabled={loading}>
+          {loading ? 'Saving…' : 'Save profile'}
+        </button>
+      </form>
     </div>
   );
 }

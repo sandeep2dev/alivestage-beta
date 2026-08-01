@@ -1,0 +1,52 @@
+.header {
+  margin-bottom: var(--space-xl);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-height: 4rem;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.name {
+  font-family: var(--font-display), 'Space Grotesk', sans-serif;
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.reputation {
+  margin: var(--space-md) 0 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-secondary);
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .name {
+    font-size: var(--font-size-2xl);
+  }
+
+  .identity {
+    gap: var(--space-md);
+  }
+}

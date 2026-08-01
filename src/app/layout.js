@@ -16,8 +16,11 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = {
-  title: 'Alivestage — Live Performance Marketplace',
-  description: 'Connect with live performance artists. Secure escrow bookings.',
+  title: {
+    default: 'Alivestage — Community Jamming',
+    template: '%s — Alivestage',
+  },
+  description: 'Host and join local jams with your community.',
   manifest: '/site.webmanifest',
   icons: {
     icon: [

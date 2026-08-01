@@ -1,0 +1,298 @@
+.hero {
+  position: relative;
+  min-height: calc(100dvh - 4rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: var(--space-2xl) 0 var(--space-3xl, 4rem);
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.orb1,
+.orb2,
+.orb3 {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.45;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
+.orb1 {
+  width: min(55vw, 420px);
+  height: min(55vw, 420px);
+  background: radial-gradient(circle, rgba(255, 107, 53, 0.55) 0%, transparent 70%);
+  top: -10%;
+  right: -5%;
+  animation-duration: 22s;
+}
+
+.orb2 {
+  width: min(45vw, 360px);
+  height: min(45vw, 360px);
+  background: radial-gradient(circle, rgba(139, 127, 232, 0.4) 0%, transparent 70%);
+  bottom: 5%;
+  left: -8%;
+  animation-duration: 26s;
+  animation-delay: -4s;
+}
+
+.orb3 {
+  width: min(30vw, 240px);
+  height: min(30vw, 240px);
+  background: radial-gradient(circle, rgba(255, 107, 53, 0.25) 0%, transparent 70%);
+  top: 40%;
+  left: 35%;
+  animation-duration: 16s;
+  animation-delay: -8s;
+}
+
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(242, 240, 236, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(242, 240, 236, 0.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, black 20%, transparent 75%);
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+}
+
+.content {
+  max-width: 42rem;
+  margin: 0 auto;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.content.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.equalizerWrap {
+  position: relative;
+  width: 7rem;
+  height: 7rem;
+  margin: 0 auto var(--space-xl);
+}
+
+.equalizer {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.bar {
+  fill: var(--accent-primary);
+  transform-origin: center;
+  animation: pulse 1.4s ease-in-out infinite alternate;
+}
+
+.glow {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(circle, rgba(255, 107, 53, 0.35) 0%, transparent 65%);
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+.eyebrow {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-primary);
+  margin-bottom: var(--space-md);
+  animation: fadeUp 0.8s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.headline {
+  font-family: var(--font-display), 'Space Grotesk', sans-serif;
+  font-size: clamp(2.25rem, 6vw, 3.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  margin-bottom: var(--space-lg);
+}
+
+.line {
+  display: block;
+  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.line:first-child {
+  animation-delay: 0.35s;
+}
+
+.line.accent {
+  color: var(--accent-primary);
+  animation-delay: 0.5s;
+}
+
+.subhead {
+  font-size: clamp(1rem, 2.5vw, 1.125rem);
+  color: var(--text-secondary);
+  line-height: 1.65;
+  max-width: 36rem;
+  margin: 0 auto var(--space-xl);
+  animation: fadeUp 0.8s 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  justify-content: center;
+  margin-bottom: var(--space-xl);
+  animation: fadeUp 0.8s 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cta {
+  min-width: 9rem;
+  font-size: var(--font-size-base);
+  padding: 0.75rem 1.5rem;
+}
+
+.ctaGhost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.ctaGhost:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.trust {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  animation: fadeUp 0.8s 0.95s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  opacity: 0.6;
+}
+
+.scrollHint {
+  position: absolute;
+  bottom: var(--space-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  padding: var(--space-md);
+  cursor: pointer;
+  opacity: 0;
+  animation: fadeIn 1s 1.4s ease both;
+}
+
+.scrollChevron {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: rotate(45deg) translateY(-4px);
+  animation: bounce 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scaleY(0.55); opacity: 0.7; }
+  100% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes drift {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(30px, -20px) scale(1.1); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: rotate(45deg) translateY(-4px); }
+  50% { transform: rotate(45deg) translateY(2px); }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    min-height: calc(100dvh - 4rem);
+    padding-bottom: var(--space-2xl);
+  }
+
+  .equalizerWrap {
+    width: 5.5rem;
+    height: 5.5rem;
+    margin-bottom: var(--space-lg);
+  }
+
+  .ctaGhost {
+    width: 100%;
+  }
+
+  .scrollHint {
+    bottom: var(--space-md);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .content,
+  .eyebrow,
+  .line,
+  .subhead,
+  .actions,
+  .trust,
+  .scrollHint {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .bar,
+  .glow,
+  .orb1,
+  .orb2,
+  .orb3,
+  .scrollChevron {
+    animation: none;
+  }
+}

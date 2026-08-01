@@ -30,8 +30,36 @@ async function requireAuth(req, res, next) {
     return res.status(401).json({ message: 'Profile not found' });
   }
 
+  if (profile.banned_at) {
+    return res.status(403).json({ message: 'Account suspended', code: 'BANNED' });
+  }
+
   req.user = { id: profile.id, email: profile.email };
   req.profile = profile;
+  next();
+}
+
+/** Optional auth — sets req.profile when a valid token is present. */
+async function optionalAuth(req, _res, next) {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  if (!token) return next();
+
+  try {
+    const payload = verifyToken(token);
+    if (!payload?.sub) return next();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', payload.sub)
+      .maybeSingle();
+    if (profile) {
+      req.user = { id: profile.id, email: profile.email };
+      req.profile = profile;
+    }
+  } catch {
+    // ignore invalid token for optional auth
+  }
   next();
 }
 
@@ -44,11 +72,16 @@ function requireRole(...roles) {
   };
 }
 
-function requireSuperadmin(req, res, next) {
-  if (!req.profile || req.profile.role !== 'superadmin') {
-    return res.status(403).json({ message: 'Superadmin access required' });
+function requireAdmin(req, res, next) {
+  if (!req.profile || req.profile.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
   }
   next();
 }
 
-module.exports = { requireAuth, requireRole, requireSuperadmin };
+module.exports = {
+  requireAuth,
+  optionalAuth,
+  requireRole,
+  requireAdmin,
+};
