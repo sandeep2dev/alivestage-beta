@@ -129,7 +129,7 @@ async function clearPreviousSeedEvents(hostIds) {
   console.log(`Cleared ${ids.length} previous seed events`);
 }
 
-async function createEventWithHostFee({ host, title, summary, description, city, address, startAt, durationMinutes, status }) {
+async function createEventWithHostFee({ host, title, summary, description, city, address, startAt, durationMinutes, status, maxSpots = 10 }) {
   const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
   const completed =
     status === 'completed'
@@ -151,6 +151,7 @@ async function createEventWithHostFee({ host, title, summary, description, city,
       start_at: startAt.toISOString(),
       duration_minutes: durationMinutes,
       end_at: endAt.toISOString(),
+      max_spots: maxSpots,
       visibility: 'public',
       status,
       ...completed,
@@ -365,7 +366,10 @@ async function main() {
   const summary = { past: 0, live: 0, upcoming: 0, joiners: 0 };
 
   for (const item of catalog) {
-    const event = await createEventWithHostFee(item);
+    const event = await createEventWithHostFee({
+      ...item,
+      maxSpots: Math.max(item.joinerCount + 4, 10),
+    });
     const joiners = pickJoiners(fans, item.joinerCount, new Set([item.host.id]));
     await addJoiners(event, joiners, { markAttended: item.markAttended });
     summary[item.bucket] += 1;

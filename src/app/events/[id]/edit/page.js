@@ -34,6 +34,7 @@ export default function EditEventPage() {
     venue: { address: '', lat: null, lng: null },
     startAt: '',
     durationMinutes: 120,
+    maxSpots: 8,
   });
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function EditEventPage() {
           },
           startAt: isoToLocalDateTimeValue(event.start_at),
           durationMinutes: event.duration_minutes || 120,
+          maxSpots: event.max_spots || 8,
         });
         setReady(true);
       } catch (err) {
@@ -103,6 +105,7 @@ export default function EditEventPage() {
           venue_lng: form.venue.lng,
           start_at: new Date(form.startAt).toISOString(),
           duration_minutes: Number(form.durationMinutes),
+          max_spots: Number(form.maxSpots),
         },
       });
       router.push(`/events/${id}`);
@@ -152,6 +155,17 @@ export default function EditEventPage() {
             <RichTextEditor
               value={form.description}
               onChange={(description) => setForm((f) => ({ ...f, description }))}
+            />
+          </FormField>
+          <FormField id="maxSpots" label="Spots available" required hint="How many people can join this jam">
+            <input
+              type="number"
+              className="input"
+              min={1}
+              max={100}
+              value={form.maxSpots}
+              onChange={(e) => setForm((f) => ({ ...f, maxSpots: e.target.value }))}
+              required
             />
           </FormField>
         </section>

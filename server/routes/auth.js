@@ -6,6 +6,7 @@ const { otpEmailHtml } = require('../services/emailTemplates');
 const { requireAuth } = require('../middleware/auth');
 const { serializePublicProfile } = require('../services/reputation');
 const { serializeEvent } = require('../services/eventSerializer');
+const { countActiveMembersByEventIds } = require('../services/eventCapacity');
 
 const router = require('express').Router();
 
@@ -220,12 +221,15 @@ router.get('/users/:id/events', async (req, res) => {
       .eq('id', req.params.id)
       .maybeSingle();
 
+    const counts = await countActiveMembersByEventIds((events || []).map((e) => e.id));
+
     res.json({
       events: (events || []).map((event) =>
         serializeEvent(event, {
           viewerId: null,
           isMember: false,
           hostProfile: profile,
+          memberCount: counts[event.id] ?? 0,
         })
       ),
     });

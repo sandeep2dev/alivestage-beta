@@ -1,6 +1,6 @@
 .page {
   padding-block: var(--page-pad-y);
-  max-width: 44rem;
+  max-width: 60rem;
 }
 
 .skeletonTitle {
@@ -37,6 +37,18 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   line-height: 1.4;
+}
+
+.joinCopyFull {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.spotsFull {
+  color: var(--color-danger);
+  font-weight: 600;
 }
 
 .unlocked {

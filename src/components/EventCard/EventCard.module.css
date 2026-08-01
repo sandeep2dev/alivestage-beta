@@ -55,6 +55,15 @@
   color: var(--color-text-faint);
 }
 
+.spots {
+  color: var(--color-text-muted);
+}
+
+.spotsFull {
+  color: var(--status-rejected);
+  font-weight: 600;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .card {
     animation: cardFadeIn 0.25s ease-out;

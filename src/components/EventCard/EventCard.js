@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import EventStatusBadge, { RoleBadge } from '@/components/EventStatusBadge/EventStatusBadge';
-import { formatEventWhen } from '@/lib/eventUi';
+import { formatEventWhen, formatSpotsRemaining } from '@/lib/eventUi';
 import styles from './EventCard.module.css';
 
 export default function EventCard({ event, variant = 'feed' }) {
@@ -25,6 +25,11 @@ export default function EventCard({ event, variant = 'feed' }) {
       <div className={styles.meta}>
         <span>{formatEventWhen(event.start_at, { weekday: variant === 'feed' })}</span>
         {event.duration_minutes != null && <span>{event.duration_minutes} min</span>}
+        {formatSpotsRemaining(event) && (
+          <span className={event.is_full ? styles.spotsFull : styles.spots}>
+            {formatSpotsRemaining(event)}
+          </span>
+        )}
         {variant === 'feed' && event.host?.name && <span>Host: {event.host.name}</span>}
       </div>
     </Link>

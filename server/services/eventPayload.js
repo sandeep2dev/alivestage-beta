@@ -1,4 +1,5 @@
 const { normalizeDescriptionForStorage } = require('./richText');
+const { MIN_EVENT_SPOTS, MAX_EVENT_SPOTS } = require('../config/community');
 
 function computeEndAt(startAt, durationMinutes) {
   return new Date(new Date(startAt).getTime() + Number(durationMinutes) * 60 * 1000);
@@ -19,6 +20,7 @@ function validateEventPayload(body, { allowPastStart = false, requireVenueCoords
   const venueLng = parseCoord(body?.venue_lng ?? body?.venueLng);
   const startAt = body?.start_at || body?.startAt;
   const durationMinutes = Number(body?.duration_minutes ?? body?.durationMinutes);
+  const maxSpots = Number(body?.max_spots ?? body?.maxSpots);
 
   const descriptionResult = normalizeDescriptionForStorage(body?.description ?? '');
   if (!descriptionResult.ok) {
@@ -57,6 +59,12 @@ function validateEventPayload(body, { allowPastStart = false, requireVenueCoords
   if (!allowPastStart && new Date(startAt).getTime() < Date.now() - 60 * 1000) {
     return { ok: false, message: 'Start time must be in the future' };
   }
+  if (!Number.isInteger(maxSpots) || maxSpots < MIN_EVENT_SPOTS || maxSpots > MAX_EVENT_SPOTS) {
+    return {
+      ok: false,
+      message: `Spots available must be between ${MIN_EVENT_SPOTS} and ${MAX_EVENT_SPOTS}`,
+    };
+  }
 
   const value = {
     title,
@@ -67,6 +75,7 @@ function validateEventPayload(body, { allowPastStart = false, requireVenueCoords
     start_at: new Date(startAt).toISOString(),
     duration_minutes: durationMinutes,
     end_at: computeEndAt(startAt, durationMinutes).toISOString(),
+    max_spots: maxSpots,
   };
 
   if (venueLat != null && venueLng != null) {

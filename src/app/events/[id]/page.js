@@ -10,7 +10,7 @@ import RichTextContent from '@/components/RichTextContent/RichTextContent';
 import { SkeletonLine } from '@/components/Skeleton/Skeleton';
 import { apiFetch } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
-import { formatEventWhen } from '@/lib/eventUi';
+import { formatEventWhen, formatSpotsSummary } from '@/lib/eventUi';
 import { useAuth } from '@/contexts/AuthContext';
 import { payAndConfirm } from '@/lib/payments';
 import { getMapsDirectionsUrl } from '@/lib/maps';
@@ -137,6 +137,7 @@ export default function EventDetailPage() {
   const isHost = event.is_host;
   const isMember = event.is_member;
   const open = ['created', 'live'].includes(event.status) && !event.has_ended;
+  const canJoin = open && !isHost && !isMember && !event.is_full;
   const activeMembers = members.filter((m) => !m.cancelled_at);
   const canEdit =
     isHost && event.status === 'created' && !event.has_started && activeMembers.length === 0;
@@ -147,12 +148,17 @@ export default function EventDetailPage() {
       <FormAlert type="success">{message}</FormAlert>
 
       <section className={styles.actionStrip}>
-        {open && !isHost && !isMember && (
+        {canJoin && (
           <div className={styles.joinBlock}>
             <p className={styles.joinCopy}>Reserve your spot now</p>
             <button type="button" className="btn btnPrimary" disabled={busy} onClick={join}>
               {busy ? 'Processing…' : 'Join for ₹50'}
             </button>
+          </div>
+        )}
+        {open && !isHost && !isMember && event.is_full && (
+          <div className={styles.joinBlock}>
+            <p className={styles.joinCopyFull}>This jam is full</p>
           </div>
         )}
         {isMember && !isHost && event.precise_address && (
@@ -275,6 +281,11 @@ export default function EventDetailPage() {
             <span>
               Host:{' '}
               <Link href={`/u/${event.host.id}`}>{event.host.name}</Link>
+            </span>
+          )}
+          {formatSpotsSummary(event) && (
+            <span className={event.is_full ? styles.spotsFull : undefined}>
+              {formatSpotsSummary(event)}
             </span>
           )}
           {isHost && activeMembers.length > 0 && (

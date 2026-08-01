@@ -1,6 +1,7 @@
 const { supabase } = require('../config/supabase');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { cancelEvent } = require('../services/cancelEvent');
+const { countActiveMembersByEventIds } = require('../services/eventCapacity');
 
 const router = require('express').Router();
 
@@ -10,11 +11,24 @@ router.get('/events', async (_req, res) => {
   try {
     const { data, error } = await supabase
       .from('events')
-      .select('id, title, city, status, start_at, host_id, created_at')
+      .select('id, title, city, status, start_at, host_id, created_at, max_spots')
       .order('created_at', { ascending: false })
       .limit(100);
     if (error) throw error;
-    res.json({ events: data || [] });
+
+    const counts = await countActiveMembersByEventIds((data || []).map((e) => e.id));
+    const events = (data || []).map((event) => {
+      const memberCount = counts[event.id] ?? 0;
+      const maxSpots = Number(event.max_spots) || 0;
+      return {
+        ...event,
+        member_count: memberCount,
+        spots_remaining: Math.max(0, maxSpots - memberCount),
+        is_full: memberCount >= maxSpots,
+      };
+    });
+
+    res.json({ events });
   } catch (err) {
     console.error('[admin/events]', err);
     res.status(500).json({ message: err.message || 'Failed to load events' });

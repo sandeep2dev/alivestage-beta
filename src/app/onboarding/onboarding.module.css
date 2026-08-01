@@ -1,6 +1,6 @@
 .page {
   padding-block: var(--page-pad-y);
-  max-width: 32rem;
+  max-width: 60rem;
   margin-inline: auto;
 }
 

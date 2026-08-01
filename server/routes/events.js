@@ -21,6 +21,11 @@ const {
 const router = require('express').Router();
 
 const { validateEventPayload } = require('../services/eventPayload');
+const {
+  countActiveMembers,
+  countActiveMembersByEventIds,
+  assertEventHasCapacity,
+} = require('../services/eventCapacity');
 
 async function loadMembership(eventId, userId) {
   if (!userId) return null;
@@ -90,12 +95,15 @@ router.get('/feed', optionalAuth, async (req, res) => {
       for (const m of mems || []) memberships[m.event_id] = true;
     }
 
+    const counts = await countActiveMembersByEventIds(sorted.map((e) => e.id));
+
     res.json({
       events: sorted.map((event) =>
         serializeEvent(event, {
           viewerId,
           isMember: Boolean(memberships[event.id]),
           hostProfile: hostsById[event.host_id],
+          memberCount: counts[event.id] ?? 0,
         })
       ),
     });
@@ -133,9 +141,20 @@ router.get('/mine', requireAuth, async (req, res) => {
       rating_count: req.profile.rating_count,
     };
 
+    const allEvents = [
+      ...(hosted || []),
+      ...(memberships || []).map((m) => m.event).filter(Boolean),
+    ];
+    const counts = await countActiveMembersByEventIds(allEvents.map((e) => e.id));
+
     res.json({
       hosting: (hosted || []).map((e) =>
-        serializeEvent(e, { viewerId: userId, isMember: true, hostProfile })
+        serializeEvent(e, {
+          viewerId: userId,
+          isMember: true,
+          hostProfile,
+          memberCount: counts[e.id] ?? 0,
+        })
       ),
       joining: (memberships || [])
         .filter((m) => m.event)
@@ -144,6 +163,7 @@ router.get('/mine', requireAuth, async (req, res) => {
             viewerId: userId,
             isMember: true,
             hostProfile: null,
+            memberCount: counts[m.event.id] ?? 0,
           })
         ),
     });
@@ -208,6 +228,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const viewerId = req.profile?.id || null;
     const membership = await loadMembership(event.id, viewerId);
     const host = await loadHost(event.host_id);
+    const memberCount = await countActiveMembers(event.id);
 
     let members = [];
     if (viewerId && (event.host_id === viewerId || membership)) {
@@ -226,6 +247,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
         viewerId,
         isMember: Boolean(membership),
         hostProfile: host,
+        memberCount,
       }),
       membership,
       members: members.filter((m) => !m.cancelled_at || event.host_id === viewerId),
@@ -367,6 +389,11 @@ router.post('/:id/join-order', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'Already joined' });
     }
 
+    const capacityCheck = await assertEventHasCapacity(event);
+    if (!capacityCheck.ok) {
+      return res.status(400).json({ message: capacityCheck.message });
+    }
+
     const { order, mock } = await createOrder({
       amount: JOIN_FEE,
       receipt: `join_${event.id.slice(0, 8)}_${Date.now()}`.slice(0, 40),
@@ -472,6 +499,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
         venue_lng: req.body?.venue_lng ?? req.body?.venueLng ?? event.venue_lng,
         start_at: req.body?.start_at ?? req.body?.startAt ?? event.start_at,
         duration_minutes: req.body?.duration_minutes ?? req.body?.durationMinutes ?? event.duration_minutes,
+        max_spots: req.body?.max_spots ?? req.body?.maxSpots ?? event.max_spots,
       },
       { allowPastStart: false, requireVenueCoords: true }
     );
@@ -490,6 +518,7 @@ router.patch('/:id', requireAuth, async (req, res) => {
         viewerId: req.profile.id,
         isMember: true,
         hostProfile: req.profile,
+        memberCount: 0,
       }),
     });
   } catch (err) {

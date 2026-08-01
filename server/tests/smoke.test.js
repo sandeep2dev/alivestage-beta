@@ -37,10 +37,29 @@ describe('eventPayload venue coordinates', () => {
       venue_lng: 73.682966,
       start_at: startAt,
       duration_minutes: 120,
+      max_spots: 12,
     });
     assert.equal(parsed.ok, true);
+    assert.equal(parsed.value.max_spots, 12);
     assert.equal(parsed.value.venue_lat, 24.583846);
     assert.equal(parsed.value.venue_lng, 73.682966);
+  });
+
+  it('rejects create payload without max_spots', () => {
+    const startAt = new Date(Date.now() + 86400000).toISOString();
+    const parsed = validateEventPayload({
+      title: 'Friday Jam Night',
+      summary: 'Open jam for all skill levels welcome',
+      description: '',
+      city: 'Udaipur',
+      precise_address: 'Zostel Udaipur, Silavat Vari Road',
+      venue_lat: 24.583846,
+      venue_lng: 73.682966,
+      start_at: startAt,
+      duration_minutes: 120,
+    });
+    assert.equal(parsed.ok, false);
+    assert.match(parsed.message, /spots available/i);
   });
 
   it('rejects create payload without venue coordinates', () => {
@@ -118,6 +137,7 @@ describe('eventSerializer address ACL', () => {
     start_at: '2030-01-01T18:00:00.000Z',
     duration_minutes: 120,
     end_at: '2030-01-01T20:00:00.000Z',
+    max_spots: 10,
     visibility: 'public',
     status: 'created',
     created_at: '2030-01-01T10:00:00.000Z',
@@ -131,6 +151,30 @@ describe('eventSerializer address ACL', () => {
     reputation_score: 4.5,
     rating_count: 12,
   };
+
+  it('exposes capacity fields when member count is provided', () => {
+    const serialized = serializeEvent(baseEvent, {
+      viewerId: 'stranger',
+      isMember: false,
+      hostProfile,
+      memberCount: 7,
+    });
+    assert.equal(serialized.max_spots, 10);
+    assert.equal(serialized.member_count, 7);
+    assert.equal(serialized.spots_remaining, 3);
+    assert.equal(serialized.is_full, false);
+  });
+
+  it('marks event full when member count reaches max_spots', () => {
+    const serialized = serializeEvent(baseEvent, {
+      viewerId: 'stranger',
+      isMember: false,
+      hostProfile,
+      memberCount: 10,
+    });
+    assert.equal(serialized.spots_remaining, 0);
+    assert.equal(serialized.is_full, true);
+  });
 
   it('hides precise_address from non-members', () => {
     const serialized = serializeEvent(baseEvent, {

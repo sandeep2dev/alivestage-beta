@@ -1,6 +1,6 @@
 .page {
   padding-block: var(--page-pad-y);
-  max-width: 40rem;
+  max-width: 60rem;
 }
 
 .back {

@@ -8,6 +8,19 @@ export function statusBadgeClass(displayStatus) {
   return 'statusPending';
 }
 
+export function formatSpotsRemaining(event) {
+  if (event?.spots_remaining == null || event?.max_spots == null) return null;
+  if (event.is_full) return 'Full';
+  const n = event.spots_remaining;
+  return `${n} spot${n === 1 ? '' : 's'} left`;
+}
+
+export function formatSpotsSummary(event) {
+  if (event?.max_spots == null || event?.member_count == null) return null;
+  if (event.is_full) return `Full · ${event.max_spots} spots`;
+  return `${event.spots_remaining} of ${event.max_spots} spots left`;
+}
+
 export function formatEventWhen(iso, { weekday = true } = {}) {
   try {
     const opts = weekday

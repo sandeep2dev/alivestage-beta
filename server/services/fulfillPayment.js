@@ -6,6 +6,8 @@ const { takeDraft, peekDraft } = require('./pendingOrders');
 const { serializeEvent } = require('./eventSerializer');
 const { HOST_CREATE_FEE, JOIN_FEE } = require('../config/community');
 const { notifyJoinConfirmed } = require('./joinNotifications');
+const { assertEventHasCapacity } = require('./eventCapacity');
+const { refundPayment } = require('./payment');
 
 async function findExistingPayment(orderId) {
   const { data } = await supabase
@@ -75,6 +77,7 @@ async function fulfillHostCreate({ orderId, paymentId, expectedUserId = null }) 
       start_at: draftEvent.start_at,
       duration_minutes: draftEvent.duration_minutes,
       end_at: draftEvent.end_at,
+      max_spots: draftEvent.max_spots,
       visibility: 'public',
       status: 'created',
     })
@@ -100,6 +103,7 @@ async function fulfillHostCreate({ orderId, paymentId, expectedUserId = null }) 
       viewerId: draft.userId,
       isMember: true,
       hostProfile: host,
+      memberCount: 0,
     }),
   };
 }
@@ -158,6 +162,11 @@ async function fulfillJoin({ orderId, paymentId, expectedUserId = null, expected
     return { ok: false, message: 'Event is not open for joining' };
   }
 
+  const capacityCheck = await assertEventHasCapacity(event);
+  if (!capacityCheck.ok) {
+    return capacityCheck;
+  }
+
   await takeDraft(orderId);
 
   const { data: payment, error: payError } = await supabase
@@ -174,6 +183,23 @@ async function fulfillJoin({ orderId, paymentId, expectedUserId = null, expected
     .select('*')
     .single();
   if (payError) throw payError;
+
+  const finalCapacity = await assertEventHasCapacity(event);
+  if (!finalCapacity.ok) {
+    if (payment.razorpay_payment_id) {
+      await refundPayment(payment.razorpay_payment_id, JOIN_FEE);
+    }
+    await supabase
+      .from('payments')
+      .update({
+        status: 'refunded_full',
+        refund_amount: JOIN_FEE,
+        refund_reason: 'event_full',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', payment.id);
+    return finalCapacity;
+  }
 
   const { data: membership, error: memError } = await supabase
     .from('event_memberships')
@@ -219,6 +245,7 @@ async function fulfillJoin({ orderId, paymentId, expectedUserId = null, expected
       viewerId: draft.userId,
       isMember: true,
       hostProfile: host,
+      memberCount: finalCapacity.memberCount + 1,
     }),
     membership,
   };

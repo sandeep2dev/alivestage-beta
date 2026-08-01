@@ -75,6 +75,10 @@
   padding: var(--space-md);
   color: var(--color-text);
   line-height: 1.55;
+
+  &:focus-within, &:focus, &:active , &:focus-visible {
+    outline: none !important;
+  }
 }
 
 .editorContent :global(p) {

@@ -84,6 +84,7 @@ export default function AdminPage() {
                 <th>Title</th>
                 <th>City</th>
                 <th>Status</th>
+                <th>Spots</th>
                 <th>Start</th>
                 <th>Actions</th>
               </tr>
@@ -96,6 +97,11 @@ export default function AdminPage() {
                   </td>
                   <td>{e.city}</td>
                   <td>{e.status}</td>
+                  <td>
+                    {e.is_full
+                      ? `Full (${e.member_count}/${e.max_spots})`
+                      : `${e.spots_remaining} left (${e.member_count}/${e.max_spots})`}
+                  </td>
                   <td>{new Date(e.start_at).toLocaleString()}</td>
                   <td>
                     {['created', 'live'].includes(e.status) ? (

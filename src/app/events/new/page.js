@@ -35,6 +35,7 @@ export default function NewEventPage() {
     venue: { address: '', lat: null, lng: null },
     startAt: '',
     durationMinutes: 120,
+    maxSpots: 8,
   });
 
   async function submitCreate() {
@@ -54,6 +55,7 @@ export default function NewEventPage() {
         venue_lng: form.venue.lng,
         start_at: new Date(form.startAt).toISOString(),
         duration_minutes: Number(form.durationMinutes),
+        max_spots: Number(form.maxSpots),
       },
     });
 
@@ -136,6 +138,17 @@ export default function NewEventPage() {
             <RichTextEditor
               value={form.description}
               onChange={(description) => setForm((f) => ({ ...f, description }))}
+            />
+          </FormField>
+          <FormField id="maxSpots" label="Spots available" required hint="How many people can join this jam">
+            <input
+              type="number"
+              className="input"
+              min={1}
+              max={100}
+              value={form.maxSpots}
+              onChange={(e) => setForm((f) => ({ ...f, maxSpots: e.target.value }))}
+              required
             />
           </FormField>
         </section>

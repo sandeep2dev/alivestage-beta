@@ -36,7 +36,10 @@ function displayStatus(event, { isMember = false, isHost = false } = {}) {
   return 'Upcoming';
 }
 
-function serializeEvent(event, { viewerId = null, isMember = false, hostProfile = null } = {}) {
+function serializeEvent(
+  event,
+  { viewerId = null, isMember = false, hostProfile = null, memberCount = null } = {}
+) {
   if (!event) return null;
 
   const isHost = Boolean(viewerId && event.host_id === viewerId);
@@ -73,7 +76,16 @@ function serializeEvent(event, { viewerId = null, isMember = false, hostProfile 
     host,
     is_host: isHost,
     is_member: Boolean(isMember),
+    max_spots: Number(event.max_spots) || 0,
   };
+
+  if (memberCount != null) {
+    const count = Number(memberCount) || 0;
+    const max = Number(event.max_spots) || 0;
+    base.member_count = count;
+    base.spots_remaining = Math.max(0, max - count);
+    base.is_full = count >= max;
+  }
 
   if (canSeeAddress) {
     base.precise_address = event.precise_address;
