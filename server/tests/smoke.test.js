@@ -23,6 +23,14 @@ const {
 } = require('../services/richText');
 const { serializeEvent } = require('../services/eventSerializer');
 const { validateEventPayload } = require('../services/eventPayload');
+const {
+  buildSignupEmbed,
+  buildEventCreatedEmbed,
+  buildEventJoinedEmbed,
+  buildRefundEmbed,
+  postActivity,
+  REFUND_REASON_LABELS,
+} = require('../services/discordActivity');
 
 describe('eventPayload venue coordinates', () => {
   it('includes venue_lat and venue_lng in validated create payload', () => {
@@ -260,5 +268,82 @@ describe('eventSerializer address ACL', () => {
 
   it('returns null for missing event', () => {
     assert.equal(serializeEvent(null), null);
+  });
+});
+
+describe('discordActivity embed builders', () => {
+  it('builds signup embed with profile link', () => {
+    const embed = buildSignupEmbed({
+      id: 'user-1',
+      name: 'alex',
+      email: 'alex@example.com',
+      onboarding_complete: false,
+    });
+    assert.equal(embed.title, 'New signup');
+    assert.match(embed.fields.find((f) => f.name === 'Email').value, /alex@example.com/);
+    assert.match(embed.fields.find((f) => f.name === 'Profile').value, /\/u\/user-1/);
+    assert.match(embed.fields.find((f) => f.name === 'Onboarding').value, /Pending/);
+  });
+
+  it('builds event created embed with fee and payment id', () => {
+    const embed = buildEventCreatedEmbed({
+      event: {
+        id: 'evt-1',
+        title: 'Friday Jam',
+        city: 'Pune',
+        start_at: '2030-06-01T18:00:00.000Z',
+        duration_minutes: 120,
+        max_spots: 10,
+      },
+      host: { name: 'Host', email: 'host@example.com' },
+      payment: { amount: 200, razorpay_payment_id: 'pay_create_1' },
+    });
+    assert.equal(embed.title, 'Event published');
+    assert.match(embed.fields.find((f) => f.name === 'Title').value, /Friday Jam/);
+    assert.match(embed.fields.find((f) => f.name === 'Create fee').value, /₹200/);
+    assert.match(embed.fields.find((f) => f.name === 'Payment ID').value, /pay_create_1/);
+    assert.match(embed.fields.find((f) => f.name === 'Event').value, /\/events\/evt-1/);
+  });
+
+  it('builds event joined embed with capacity fields', () => {
+    const embed = buildEventJoinedEmbed({
+      event: { id: 'evt-1', title: 'Friday Jam', city: 'Pune' },
+      joiner: { name: 'Jamie', email: 'jamie@example.com', city: 'Mumbai' },
+      host: { name: 'Host' },
+      payment: { amount: 50, razorpay_payment_id: 'pay_join_1' },
+      memberCount: 3,
+      spotsRemaining: 7,
+    });
+    assert.equal(embed.title, 'New joiner');
+    assert.match(embed.fields.find((f) => f.name === 'Joiner').value, /Jamie/);
+    assert.match(embed.fields.find((f) => f.name === 'Members').value, /3/);
+    assert.match(embed.fields.find((f) => f.name === 'Spots left').value, /7/);
+  });
+
+  it('builds refund embed with reason label', () => {
+    const embed = buildRefundEmbed({
+      event: { id: 'evt-1', title: 'Friday Jam' },
+      user: { name: 'Jamie', email: 'jamie@example.com' },
+      payment: { razorpay_payment_id: 'pay_ref_1' },
+      reason: 'joiner_cancelled',
+      refundAmount: 25,
+      triggeredBy: 'Joiner',
+    });
+    assert.equal(embed.title, 'Refund initiated');
+    assert.match(embed.fields.find((f) => f.name === 'Reason').value, /Joiner left/);
+    assert.match(embed.fields.find((f) => f.name === 'Amount').value, /₹25/);
+    assert.equal(REFUND_REASON_LABELS.host_cancelled, 'Host cancelled event (full ₹50)');
+  });
+
+  it('postActivity logs mock payload when webhook url is unset', async () => {
+    const prev = process.env.DISCORD_SIGNUP_WEBHOOK_URL;
+    delete process.env.DISCORD_SIGNUP_WEBHOOK_URL;
+    const result = await postActivity({
+      channel: 'signup',
+      embeds: [buildSignupEmbed({ id: 'u1', name: 'a', email: 'a@t.com', onboarding_complete: false })],
+    });
+    assert.equal(result.mock, true);
+    assert.equal(result.channel, 'signup');
+    if (prev) process.env.DISCORD_SIGNUP_WEBHOOK_URL = prev;
   });
 });

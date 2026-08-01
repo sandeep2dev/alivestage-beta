@@ -8,6 +8,11 @@ const { HOST_CREATE_FEE, JOIN_FEE } = require('../config/community');
 const { notifyJoinConfirmed } = require('./joinNotifications');
 const { assertEventHasCapacity } = require('./eventCapacity');
 const { refundPayment } = require('./payment');
+const {
+  notifyEventCreated,
+  notifyEventJoined,
+  notifyRefundInitiated,
+} = require('./discordActivity');
 
 async function findExistingPayment(orderId) {
   const { data } = await supabase
@@ -97,6 +102,14 @@ async function fulfillHostCreate({ orderId, paymentId, expectedUserId = null }) 
   if (payError) throw payError;
 
   const host = await loadHost(draft.userId);
+  const payment = {
+    amount: draft.amount || HOST_CREATE_FEE,
+    razorpay_payment_id: paymentId,
+  };
+  notifyEventCreated({ event, host, payment }).catch((err) => {
+    console.error('[fulfillHostCreate] discord notify failed', err);
+  });
+
   return {
     ok: true,
     event: serializeEvent(event, {
@@ -198,6 +211,15 @@ async function fulfillJoin({ orderId, paymentId, expectedUserId = null, expected
         updated_at: new Date().toISOString(),
       })
       .eq('id', payment.id);
+    notifyRefundInitiated({
+      event,
+      user: { id: draft.userId },
+      payment,
+      reason: 'event_full',
+      refundAmount: JOIN_FEE,
+    }).catch((err) => {
+      console.error('[fulfillJoin] discord refund notify failed', err);
+    });
     return finalCapacity;
   }
 
@@ -239,13 +261,26 @@ async function fulfillJoin({ orderId, paymentId, expectedUserId = null, expected
     console.error('[fulfillJoin] join confirmation email failed', err);
   });
 
+  const memberCount = finalCapacity.memberCount + 1;
+  const spotsRemaining = Math.max(0, Number(event.max_spots) - memberCount);
+  notifyEventJoined({
+    event,
+    userId: draft.userId,
+    host,
+    payment,
+    memberCount,
+    spotsRemaining,
+  }).catch((err) => {
+    console.error('[fulfillJoin] discord notify failed', err);
+  });
+
   return {
     ok: true,
     event: serializeEvent(event, {
       viewerId: draft.userId,
       isMember: true,
       hostProfile: host,
-      memberCount: finalCapacity.memberCount + 1,
+      memberCount,
     }),
     membership,
   };

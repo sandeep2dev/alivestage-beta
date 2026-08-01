@@ -6,6 +6,7 @@ const { refundPayment } = require('./payment');
 const { sendMail } = require('./email');
 const { serializeEvent } = require('./eventSerializer');
 const { JOIN_FEE } = require('../config/community');
+const { notifyRefundInitiated } = require('./discordActivity');
 
 function appUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -72,6 +73,16 @@ async function cancelEvent({ eventId, actorId, asAdmin = false, hostProfile = nu
           updated_at: new Date().toISOString(),
         })
         .eq('id', payment.id);
+      notifyRefundInitiated({
+        event,
+        user: m.profile,
+        payment,
+        reason: 'host_cancelled',
+        refundAmount: JOIN_FEE,
+        triggeredBy: asAdmin ? 'Admin' : 'Host',
+      }).catch((err) => {
+        console.error('[cancelEvent] discord refund notify failed', err);
+      });
     }
     await supabase
       .from('event_memberships')

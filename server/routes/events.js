@@ -9,6 +9,7 @@ const {
 const { saveDraft } = require('../services/pendingOrders');
 const { fulfillHostCreate, fulfillJoin } = require('../services/fulfillPayment');
 const { cancelEvent } = require('../services/cancelEvent');
+const { notifyRefundInitiated } = require('../services/discordActivity');
 const { serializeEvent } = require('../services/eventSerializer');
 const { normalizeDescriptionForStorage, eventImagePath } = require('../services/richText');
 const {
@@ -580,6 +581,16 @@ router.post('/:id/leave', requireAuth, async (req, res) => {
           updated_at: new Date().toISOString(),
         })
         .eq('id', payment.id);
+      notifyRefundInitiated({
+        event,
+        user: req.profile,
+        payment,
+        reason: 'joiner_cancelled',
+        refundAmount: JOIN_CANCEL_REFUND,
+        triggeredBy: 'Joiner',
+      }).catch((err) => {
+        console.error('[events/leave] discord refund notify failed', err);
+      });
     }
 
     await supabase

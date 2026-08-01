@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const { serializePublicProfile } = require('../services/reputation');
 const { serializeEvent } = require('../services/eventSerializer');
 const { countActiveMembersByEventIds } = require('../services/eventCapacity');
+const { notifySignup } = require('../services/discordActivity');
 
 const router = require('express').Router();
 
@@ -69,6 +70,9 @@ router.post('/verify-otp', async (req, res) => {
         .single();
       if (createError) throw createError;
       profile = created;
+      notifySignup(profile).catch((err) => {
+        console.error('[discord] signup notify failed', err);
+      });
     }
 
     if (profile.banned_at) {
