@@ -49,7 +49,7 @@ export default function PrivacyPage() {
               <tr>
                 <td><strong>Email address</strong></td>
                 <td>Sign-in</td>
-                <td>To send a one-time passcode and verify your account, and to send service emails (join confirmations, refunds, rating prompts).</td>
+                <td>To send a one-time passcode and verify your account, and to send service emails (join confirmations, cancellation notices, rating prompts).</td>
               </tr>
               <tr>
                 <td><strong>Display name</strong></td>
@@ -98,8 +98,8 @@ export default function PrivacyPage() {
               </tr>
               <tr>
                 <td><strong>Payment records</strong> (amount, fee type, Razorpay order and payment IDs, refund status)</td>
-                <td>Paying ₹200 to host or ₹50 to join</td>
-                <td>To process platform fees, issue refunds when a jam is cancelled or you leave, and maintain a financial audit trail.</td>
+                <td>Paying ₹50 to host or ₹10 to join</td>
+                <td>To process platform fees and maintain a financial audit trail.</td>
               </tr>
               <tr>
                 <td><strong>Jam membership</strong> (which jams you joined or hosted)</td>
@@ -142,16 +142,16 @@ export default function PrivacyPage() {
               <strong>Your home or rehearsal space should not be visible to strangers who have not committed to attend.</strong>
             </p>
             <p>
-              When you browse jams, you see the <strong>city</strong>, title, summary, schedule, and host name — but not the exact address. The precise venue address and map coordinates are unlocked only after you pay the ₹50 join fee (or if you are the host). This is enforced on our servers, not just hidden in the app interface — so the address cannot be retrieved through the API without an active, paid membership.
+              When you browse jams, you see the <strong>city</strong>, title, summary, schedule, and host name — but not the exact address. The precise venue address and map coordinates are unlocked only after you pay the ₹10 join fee (or if you are the host). This is enforced on our servers, not just hidden in the app interface — so the address cannot be retrieved through the API without an active, paid membership.
             </p>
             <p>
-              Hosts enter the precise address before paying the ₹200 hosting fee. While the jam is being set up, that address is held temporarily until payment succeeds; it is never shown publicly until the jam is live and you are a paid joiner or the host.
+              Hosts enter the precise address before paying the ₹50 hosting fee. While the jam is being set up, that address is held temporarily until payment succeeds; it is never shown publicly until the jam is live and you are a paid joiner or the host.
             </p>
           </div>
 
           <h2>Payments and Razorpay</h2>
           <p>
-            Alivestage uses <strong>Razorpay</strong> to collect the ₹200 host fee and ₹50 join fee. When you pay:
+            Alivestage uses <strong>Razorpay</strong> to collect the ₹50 host fee and ₹10 join fee. When you pay:
           </p>
           <ul>
             <li>Razorpay receives the order amount, a receipt reference, and internal notes (fee type, your user ID, and for joins, the jam ID).</li>

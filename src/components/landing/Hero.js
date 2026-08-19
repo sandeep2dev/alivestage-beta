@@ -85,9 +85,9 @@ export default function Hero() {
           </div>
 
           {/* <div className={styles.trust}>
-            <span>₹50 to join</span>
+            <span>₹10 to join</span>
             <span className={styles.dot} aria-hidden="true" />
-            <span>₹200 to host</span>
+            <span>₹50 to host</span>
             <span className={styles.dot} aria-hidden="true" />
             <span>Address unlocked after join</span>
           </div> */}

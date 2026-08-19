@@ -88,9 +88,8 @@ describe('eventPayload venue coordinates', () => {
 
 describe('payment helpers', () => {
   it('converts INR to paise', () => {
+    assert.equal(amountToPaise(10), 1000);
     assert.equal(amountToPaise(50), 5000);
-    assert.equal(amountToPaise(200), 20000);
-    assert.equal(amountToPaise(25), 2500);
   });
 
   it('verifies checkout payment signatures', () => {
@@ -296,11 +295,11 @@ describe('discordActivity embed builders', () => {
         max_spots: 10,
       },
       host: { name: 'Host', email: 'host@example.com' },
-      payment: { amount: 200, razorpay_payment_id: 'pay_create_1' },
+      payment: { amount: 50, razorpay_payment_id: 'pay_create_1' },
     });
     assert.equal(embed.title, 'Event published');
     assert.match(embed.fields.find((f) => f.name === 'Title').value, /Friday Jam/);
-    assert.match(embed.fields.find((f) => f.name === 'Create fee').value, /₹200/);
+    assert.match(embed.fields.find((f) => f.name === 'Create fee').value, /₹50/);
     assert.match(embed.fields.find((f) => f.name === 'Payment ID').value, /pay_create_1/);
     assert.match(embed.fields.find((f) => f.name === 'Event').value, /\/events\/evt-1/);
   });
@@ -310,7 +309,7 @@ describe('discordActivity embed builders', () => {
       event: { id: 'evt-1', title: 'Friday Jam', city: 'Pune' },
       joiner: { name: 'Jamie', email: 'jamie@example.com', city: 'Mumbai' },
       host: { name: 'Host' },
-      payment: { amount: 50, razorpay_payment_id: 'pay_join_1' },
+      payment: { amount: 10, razorpay_payment_id: 'pay_join_1' },
       memberCount: 3,
       spotsRemaining: 7,
     });
@@ -325,14 +324,14 @@ describe('discordActivity embed builders', () => {
       event: { id: 'evt-1', title: 'Friday Jam' },
       user: { name: 'Jamie', email: 'jamie@example.com' },
       payment: { razorpay_payment_id: 'pay_ref_1' },
-      reason: 'joiner_cancelled',
-      refundAmount: 25,
+      reason: 'event_full',
+      refundAmount: 10,
       triggeredBy: 'Joiner',
     });
     assert.equal(embed.title, 'Refund initiated');
-    assert.match(embed.fields.find((f) => f.name === 'Reason').value, /Joiner left/);
-    assert.match(embed.fields.find((f) => f.name === 'Amount').value, /₹25/);
-    assert.equal(REFUND_REASON_LABELS.host_cancelled, 'Host cancelled event (full ₹50)');
+    assert.match(embed.fields.find((f) => f.name === 'Reason').value, /Event full/);
+    assert.match(embed.fields.find((f) => f.name === 'Amount').value, /₹10/);
+    assert.equal(REFUND_REASON_LABELS.host_cancelled, 'Host cancelled event (no refund)');
   });
 
   it('postActivity logs mock payload when webhook url is unset', async () => {
