@@ -112,7 +112,7 @@ export default function AdminPage() {
                         onClick={() =>
                           setConfirm({
                             title: 'Force-cancel event?',
-                            body: 'Joiners get a full ₹50 refund. Host create fee is not refunded.',
+                            body: 'Joiners are notified. Host and join fees are not refunded.',
                             danger: true,
                             confirmLabel: 'Cancel event',
                             onConfirm: () =>

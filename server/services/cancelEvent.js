@@ -1,13 +1,10 @@
 /**
- * Shared host/admin event cancel with joiner refunds.
+ * Shared host/admin event cancel — fees are non-refundable.
  */
 const { supabase } = require('../config/supabase');
-const { refundPayment } = require('./payment');
 const { sendMail } = require('./email');
 const { jamCancelledEmailHtml } = require('./emailTemplates');
 const { serializeEvent } = require('./eventSerializer');
-const { JOIN_FEE } = require('../config/community');
-const { notifyRefundInitiated } = require('./discordActivity');
 
 function appUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -25,7 +22,6 @@ async function notifyJoinersCancelled(event, joiners) {
           event,
           profileName: profile.name,
           eventUrl: link,
-          refundAmount: JOIN_FEE,
         }),
       });
     }
@@ -33,7 +29,7 @@ async function notifyJoinersCancelled(event, joiners) {
 }
 
 /**
- * Cancel an open event and refund all active joiners in full.
+ * Cancel an open event and soft-delete active joiner memberships.
  * @param {{ eventId: string, actorId: string, asAdmin?: boolean, hostProfile?: object }} opts
  */
 async function cancelEvent({ eventId, actorId, asAdmin = false, hostProfile = null }) {
@@ -61,29 +57,6 @@ async function cancelEvent({ eventId, actorId, asAdmin = false, hostProfile = nu
     .is('cancelled_at', null);
 
   for (const m of memberships || []) {
-    const payment = m.payment;
-    if (payment?.razorpay_payment_id && payment.status === 'paid') {
-      await refundPayment(payment.razorpay_payment_id, JOIN_FEE);
-      await supabase
-        .from('payments')
-        .update({
-          status: 'refunded_full',
-          refund_amount: JOIN_FEE,
-          refund_reason: 'host_cancelled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', payment.id);
-      notifyRefundInitiated({
-        event,
-        user: m.profile,
-        payment,
-        reason: 'host_cancelled',
-        refundAmount: JOIN_FEE,
-        triggeredBy: asAdmin ? 'Admin' : 'Host',
-      }).catch((err) => {
-        console.error('[cancelEvent] discord refund notify failed', err);
-      });
-    }
     await supabase
       .from('event_memberships')
       .update({ cancelled_at: new Date().toISOString() })

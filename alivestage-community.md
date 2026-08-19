@@ -26,10 +26,10 @@ This is a portfolio backend project — a community jamming platform, not a comm
 - `created_at`
 
 **Payment**
-- `id`, `user_id`, `event_id`, `type`: `host_create_fee` (₹200) | `join_fee` (₹50)
+- `id`, `user_id`, `event_id`, `type`: `host_create_fee` (₹50) | `join_fee` (₹10)
 - `status`: `paid` | `refunded_full` | `refunded_partial` | `failed`
 - `razorpay_payment_id`, `razorpay_order_id`
-- `refund_amount` (nullable), `refund_reason`: `host_cancelled` | `joiner_cancelled` | null
+- `refund_amount` (nullable), `refund_reason`: `event_full` | null (only auto-refund when spot unavailable)
 
 **EventMembership**
 - `id`, `event_id`, `user_id`
@@ -54,21 +54,19 @@ This is a portfolio backend project — a community jamming platform, not a comm
 ## Payment & Refund State Machine
 
 **Host creates event:**
-- Charge ₹200 via Razorpay → on success, event status `created`.
+- Charge ₹50 via Razorpay → on success, event status `created`.
 - If payment fails, event is not created (don't create a "pending payment" event row — keep this simple).
 
 **User joins event:**
-- Charge ₹50 → on success, create `EventMembership` row, event visible with precise address to this user now.
+- Charge ₹10 → on success, create `EventMembership` row, event visible with precise address to this user now.
 - Payment required to join — no "request then pay" approval step.
 
 **Host cancels event:**
-- All `EventMembership` payments → `refunded_full` (100% of ₹50 back).
-- Host's ₹200 create fee → NOT refunded.
+- Joiner memberships soft-deleted. No refunds (host or join fees).
 - Event status → `cancelled`. Notify all joiners via email.
 
 **Joiner cancels their own join:**
-- Their payment → `refunded_partial`, `refund_amount = 25` (50%).
-- `EventMembership` row removed or soft-deleted (decide based on whether you want to show "cancelled joiners" in host's view — soft-delete recommended for audit trail).
+- No refund. `EventMembership` row soft-deleted for audit trail.
 
 **Event reaches `end_at` with status still `live`/`created`:**
 - Host manually marks `completed` (no auto-transition — host must confirm it happened).
@@ -101,7 +99,7 @@ This is a portfolio backend project — a community jamming platform, not a comm
 2. Auth/onboarding flow (email OTP → profile completion with city/pincode).
 3. Event CRUD + Razorpay charge-on-create.
 4. Join flow + Razorpay charge-on-join + access-control serializer.
-5. Cancellation flow (host and joiner paths) with Razorpay refund API calls.
+5. Cancellation flow (host and joiner paths) — fees non-refundable; event-full auto-refund only.
 6. Host attendance marking UI/endpoint.
 7. Cron job for rating-window trigger + rating submission endpoints.
 8. Reputation aggregation + public display threshold logic.

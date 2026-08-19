@@ -1,7 +1,6 @@
 /** Community fee + rating window constants (INR / hours / days). */
-const HOST_CREATE_FEE = 200;
-const JOIN_FEE = 50;
-const JOIN_CANCEL_REFUND = 25;
+const HOST_CREATE_FEE = 50;
+const JOIN_FEE = 10;
 const RATING_GRACE_HOURS = 36;
 const RATING_WINDOW_DAYS = 5;
 const REPUTATION_DISPLAY_THRESHOLD = 10;
@@ -11,7 +10,6 @@ const MAX_EVENT_SPOTS = 100;
 module.exports = {
   HOST_CREATE_FEE,
   JOIN_FEE,
-  JOIN_CANCEL_REFUND,
   RATING_GRACE_HOURS,
   RATING_WINDOW_DAYS,
   REPUTATION_DISPLAY_THRESHOLD,

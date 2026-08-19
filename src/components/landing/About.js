@@ -34,11 +34,11 @@ export default function About() {
 
           <div className={styles.stats}>
             <div className={styles.stat}>
-              <span className={styles.statValue}>₹50</span>
+              <span className={styles.statValue}>₹10</span>
               <span className={styles.statLabel}>Join fee — unlocks the venue address</span>
             </div>
             <div className={styles.stat}>
-              <span className={styles.statValue}>₹200</span>
+              <span className={styles.statValue}>₹50</span>
               <span className={styles.statLabel}>Host fee — publish your jam to the feed</span>
             </div>
             <div className={styles.stat}>

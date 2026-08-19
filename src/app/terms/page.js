@@ -13,8 +13,8 @@ const EFFECTIVE_DATE = '1 August 2026';
 /** Courts of exclusive jurisdiction */
 const JURISDICTION = 'Udaipur, Rajasthan';
 
-const HOST_FEE = 200;
-const JOIN_FEE = 50;
+const HOST_FEE = 50;
+const JOIN_FEE = 10;
 const MIN_AGE = 18;
 
 export default function TermsPage() {
@@ -125,8 +125,7 @@ export default function TermsPage() {
             </li>
             <li>
               <strong>Host in good faith</strong> — if you pay to create a jam, you intend to hold
-              it at the listed time and place (or cancel through the app with appropriate refunds to
-              joiners).
+              it at the listed time and place (or cancel through the app if plans change).
             </li>
             <li>
               <strong>Join in good faith</strong> — if you pay to join, you intend to attend. The
@@ -242,7 +241,7 @@ export default function TermsPage() {
           <p>
             <strong>How suspension works:</strong> An admin may ban your account, which sets a
             suspension timestamp on your profile. While suspended, you cannot sign in or use
-            authenticated features. Suspension does not automatically refund active jam memberships
+            authenticated features. Suspension does not refund active jam memberships
             or delete your payment history.
           </p>
           <p>

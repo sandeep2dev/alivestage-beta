@@ -52,7 +52,7 @@ router.get('/users', async (_req, res) => {
   }
 });
 
-/** Force-cancel an event and refund joiners (admin). */
+/** Force-cancel an event (admin). Fees are non-refundable. */
 router.post('/events/:id/cancel', async (req, res) => {
   try {
     const result = await cancelEvent({

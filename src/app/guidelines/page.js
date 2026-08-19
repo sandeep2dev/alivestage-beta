@@ -35,7 +35,7 @@ export default function GuidelinesPage() {
 
           <h2>Show up — or say you can&apos;t</h2>
           <p>
-            When you pay ₹50 to join, you&apos;re telling the host and everyone else that you plan
+            When you pay ₹10 to join, you&apos;re telling the host and everyone else that you plan
             to be there. No-shows waste a spot someone else could have taken and mess with a host
             who may have cleared time and space for you.
           </p>
@@ -46,7 +46,7 @@ export default function GuidelinesPage() {
             </li>
             <li>
               <strong>If plans change, leave through the app</strong> while the jam is still open.
-              You&apos;ll get a 50% refund (₹25) and your spot opens up. See our{' '}
+              Your spot opens up, but the join fee is not refunded. See our{' '}
               <Link href="/refund-policy">Refund Policy</Link> for details.
             </li>
             <li>
@@ -135,8 +135,8 @@ export default function GuidelinesPage() {
               be able to sign in until we review an appeal.
             </li>
             <li>
-              <strong>Cancel an entire jam</strong> — if the host is the problem, joiners get a full
-              refund.
+              <strong>Cancel an entire jam</strong> — if the host is the problem, joiners are
+              notified. Fees are not refunded.
             </li>
           </ul>
           <div className={styles.highlight}>

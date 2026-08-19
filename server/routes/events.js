@@ -3,19 +3,16 @@ const { requireAuth, optionalAuth } = require('../middleware/auth');
 const {
   createOrder,
   verifyPaymentSignature,
-  refundPayment,
   publicKey,
 } = require('../services/payment');
 const { saveDraft } = require('../services/pendingOrders');
 const { fulfillHostCreate, fulfillJoin } = require('../services/fulfillPayment');
 const { cancelEvent } = require('../services/cancelEvent');
-const { notifyRefundInitiated } = require('../services/discordActivity');
 const { serializeEvent } = require('../services/eventSerializer');
 const { normalizeDescriptionForStorage, eventImagePath } = require('../services/richText');
 const {
   HOST_CREATE_FEE,
   JOIN_FEE,
-  JOIN_CANCEL_REFUND,
   RATING_WINDOW_DAYS,
 } = require('../config/community');
 
@@ -564,41 +561,12 @@ router.post('/:id/leave', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'You are not a member of this event' });
     }
 
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('id', membership.payment_id)
-      .maybeSingle();
-
-    if (payment?.razorpay_payment_id && payment.status === 'paid') {
-      await refundPayment(payment.razorpay_payment_id, JOIN_CANCEL_REFUND);
-      await supabase
-        .from('payments')
-        .update({
-          status: 'refunded_partial',
-          refund_amount: JOIN_CANCEL_REFUND,
-          refund_reason: 'joiner_cancelled',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', payment.id);
-      notifyRefundInitiated({
-        event,
-        user: req.profile,
-        payment,
-        reason: 'joiner_cancelled',
-        refundAmount: JOIN_CANCEL_REFUND,
-        triggeredBy: 'Joiner',
-      }).catch((err) => {
-        console.error('[events/leave] discord refund notify failed', err);
-      });
-    }
-
     await supabase
       .from('event_memberships')
       .update({ cancelled_at: new Date().toISOString() })
       .eq('id', membership.id);
 
-    res.json({ ok: true, refund_amount: JOIN_CANCEL_REFUND });
+    res.json({ ok: true });
   } catch (err) {
     console.error('[events/leave]', err);
     res.status(500).json({ message: err.message || 'Failed to leave event' });

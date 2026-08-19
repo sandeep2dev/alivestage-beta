@@ -52,7 +52,7 @@ export default function Footer() {
             © {year} Alivestage. Built for local music communities.
           </p>
           <p className={styles.fees}>
-            Join ₹50 · Host ₹200 · Full refund on host cancel
+            Join ₹10 · Host ₹50 · Non-refundable fees
           </p>
         </div>
       </div>

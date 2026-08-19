@@ -109,7 +109,7 @@ export default function NewEventPage() {
   return (
     <div className={`container ${styles.page}`}>
       <h1 className="pageTitle">Host a jam</h1>
-      <p className="pageSubtitle">₹200 create fee. Joiners pay ₹50 to unlock the precise address.</p>
+      <p className="pageSubtitle">₹50 create fee. Joiners pay ₹10 to unlock the precise address.</p>
 
       <FormAlert type="error">{error}</FormAlert>
 
@@ -208,7 +208,7 @@ export default function NewEventPage() {
 
         <div className={styles.submitRow}>
           <button type="submit" className="btn btnPrimary" disabled={loading}>
-            {loading ? 'Processing…' : 'Pay ₹200 & publish'}
+            {loading ? 'Processing…' : 'Pay ₹50 & publish'}
           </button>
         </div>
       </form>

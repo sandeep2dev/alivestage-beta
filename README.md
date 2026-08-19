@@ -6,10 +6,10 @@ Portfolio community platform for hosting and joining local jams. Built with Next
 
 - **Identity:** Email OTP for session login + city/pincode onboarding.
 - **Browse:** Public feed and event summaries; `precise_address` only after paid join (server-side serializer).
-- **Host create:** ₹200 fee → event published (`created`). Host fee is never refunded on cancel.
-- **Join:** ₹50 fee → membership + precise address unlocked.
-- **Host cancel:** full ₹50 refund to joiners; soft-delete memberships.
-- **Joiner leave:** 50% refund (₹25); soft-delete membership.
+- **Host create:** ₹50 fee → event published (`created`). Host fee is non-refundable.
+- **Join:** ₹10 fee → membership + precise address unlocked. Join fee is non-refundable.
+- **Host cancel:** joiners notified; memberships soft-deleted; no refunds.
+- **Joiner leave:** membership soft-deleted; no refund.
 - **Attendance:** host marks attended; self-present is informational only.
 - **Ratings:** after host marks `completed`; prompts after `end_at` + 36h grace; window 5 days; reputation shown publicly at 10+ ratings.
 - **Help:** sidebar Help posts to an optional Discord incoming webhook (`DISCORD_SUPPORT_WEBHOOK_URL`).

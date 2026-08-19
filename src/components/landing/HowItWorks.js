@@ -11,7 +11,7 @@ const JOIN_STEPS = [
   },
   {
     num: '02',
-    title: 'Pay ₹50 to join',
+    title: 'Pay ₹10 to join',
     desc: "A small commitment fee unlocks the precise venue location. No approval step — pay and you're in.",
   },
   {
@@ -25,7 +25,7 @@ const HOST_STEPS = [
   {
     num: '01',
     title: 'Create your jam',
-    desc: 'Set title, description, spots, date, city, and pin the venue on a map. Pay ₹200 to publish.',
+    desc: 'Set title, description, spots, date, city, and pin the venue on a map. Pay ₹50 to publish.',
   },
   {
     num: '02',

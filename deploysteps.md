@@ -399,16 +399,16 @@ Run through this in order:
 
 ### Events
 - [ ] Browse `/events` — feed loads
-- [ ] Create event → Razorpay ₹200 checkout opens (live mode)
+- [ ] Create event → Razorpay ₹50 checkout opens (live mode)
 - [ ] After payment → event appears as `created`
-- [ ] Join event → ₹50 checkout → precise address unlocked
+- [ ] Join event → ₹10 checkout → precise address unlocked
 - [ ] Join confirmation email received
 
 ### Payments / webhooks
 - [ ] Razorpay webhook shows 200 in dashboard
 - [ ] `payments` row created in Supabase after join/create
-- [ ] Host cancel → joiner gets full ₹50 refund
-- [ ] Joiner leave → 50% ₹25 refund
+- [ ] Host cancel → joiners notified, no refund
+- [ ] Joiner leave → no refund
 
 ### Content
 - [ ] Rich text + image upload in event description

@@ -277,7 +277,7 @@ function joinConfirmedEmailHtml({
   const city = escapeHtml(event.city);
   const address = escapeHtml(event.precise_address || 'Address shared on jam page');
   const safeEventUrl = escapeHtml(eventUrl);
-  const amount = Number(amountPaid) || 50;
+  const amount = Number(amountPaid) || 10;
   const paymentLine = paymentId
     ? `&#8377;${amount} &middot; <span style="color:${BRAND.textBodySoft};">Payment ID: ${escapeHtml(paymentId)}</span>`
     : `&#8377;${amount}`;
@@ -342,7 +342,7 @@ function joinConfirmedEmailHtml({
             <td style="padding:0 24px 0 24px;">
               <div style="border-top:1px solid ${BRAND.border};padding-top:16px;">
                 <span style="font-size:12px;font-weight:400;color:${BRAND.textBodySoft};line-height:1.65;">
-                  The exact address is private &mdash; please don&rsquo;t share it publicly. If plans change, leave through the app while the jam is still open for a partial refund. See our <a href="${refundUrl}" style="color:${BRAND.textBody};text-decoration:underline;">refund policy</a> for details.
+                  The exact address is private &mdash; please don&rsquo;t share it publicly. If plans change, you can leave through the app while the jam is still open &mdash; your join fee is not refunded. See our <a href="${refundUrl}" style="color:${BRAND.textBody};text-decoration:underline;">refund policy</a> for details.
                 </span>
               </div>
             </td>
@@ -357,12 +357,11 @@ function joinConfirmedEmailHtml({
   });
 }
 
-function jamCancelledEmailHtml({ event, profileName, eventUrl, refundAmount = 50 }) {
+function jamCancelledEmailHtml({ event, profileName, eventUrl }) {
   const title = escapeHtml(event.title);
   const name = escapeHtml(profileName || 'there');
   const city = escapeHtml(event.city);
   const safeEventUrl = escapeHtml(eventUrl);
-  const amount = Number(refundAmount) || 50;
   const browseUrl = escapeHtml(`${appUrl()}/events`);
 
   const bodyHtml = `
@@ -388,7 +387,7 @@ function jamCancelledEmailHtml({ event, profileName, eventUrl, refundAmount = 50
           <tr>
             <td style="padding:6px 24px 24px 24px;">
               <span style="font-size:14px;font-weight:400;color:${BRAND.textBody};line-height:1.6;">
-                Hi ${name}, the host cancelled <span style="color:${BRAND.textEmphasis};font-weight:500;">${title}</span> in ${city}. Your &#8377;${amount} join fee has been fully refunded.
+                Hi ${name}, the host cancelled <span style="color:${BRAND.textEmphasis};font-weight:500;">${title}</span> in ${city}. Your join fee is not refunded.
               </span>
             </td>
           </tr>
@@ -414,7 +413,7 @@ function jamCancelledEmailHtml({ event, profileName, eventUrl, refundAmount = 50
 
   return emailShell({
     title: `Alivestage — Jam cancelled: ${title}`,
-    preheader: `${title} was cancelled. Your ₹${amount} join fee has been fully refunded.`,
+    preheader: `${title} was cancelled. Your join fee is not refunded.`,
     width: 560,
     bodyHtml,
   });

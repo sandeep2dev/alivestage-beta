@@ -152,7 +152,7 @@ export default function EventDetailPage() {
           <div className={styles.joinBlock}>
             <p className={styles.joinCopy}>Reserve your spot now</p>
             <button type="button" className="btn btnPrimary" disabled={busy} onClick={join}>
-              {busy ? 'Processing…' : 'Join for ₹50'}
+              {busy ? 'Processing…' : 'Join for ₹10'}
             </button>
           </div>
         )}
@@ -190,20 +190,20 @@ export default function EventDetailPage() {
               onClick={() =>
                 setConfirm({
                   title: 'Leave this jam?',
-                  body: 'You will receive a 50% refund (₹25).',
+                  body: 'Your join fee is not refunded. Your spot will open for someone else.',
                   danger: true,
                   confirmLabel: 'Leave jam',
                   onConfirm: () =>
                     runAction(async () => {
                       const token = getAccessToken();
                       await apiFetch(`/api/events/${id}/leave`, { method: 'POST', token });
-                      setMessage('Left event. ₹25 refund initiated.');
+                      setMessage('Left event. Your spot is open for someone else.');
                       router.push('/my-events');
                     }),
                 })
               }
             >
-              Leave (₹25 refund)
+              Leave jam
             </button>
           </div>
         )}
@@ -244,14 +244,14 @@ export default function EventDetailPage() {
               onClick={() =>
                 setConfirm({
                   title: 'Cancel this jam?',
-                  body: 'Joiners get a full ₹50 refund. Your ₹200 host fee is not refunded.',
+                  body: 'Joiners are notified. Host and join fees are not refunded.',
                   danger: true,
                   confirmLabel: 'Cancel jam',
                   onConfirm: () =>
                     runAction(async () => {
                       const token = getAccessToken();
                       await apiFetch(`/api/events/${id}/cancel`, { method: 'POST', token });
-                      setMessage('Event cancelled. Joiners refunded.');
+                      setMessage('Event cancelled. Joiners notified.');
                     }),
                 })
               }

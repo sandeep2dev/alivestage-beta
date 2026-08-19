@@ -13,9 +13,9 @@ const COLORS = {
 };
 
 const REFUND_REASON_LABELS = {
-  host_cancelled: 'Host cancelled event (full ₹50)',
-  joiner_cancelled: 'Joiner left (50% ₹25)',
-  event_full: 'Event full — auto refund (full ₹50)',
+  host_cancelled: 'Host cancelled event (no refund)',
+  joiner_cancelled: 'Joiner left (no refund)',
+  event_full: 'Event full — auto refund (full ₹10)',
 };
 
 const REFUND_TRIGGERED_BY = {

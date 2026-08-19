@@ -11,7 +11,7 @@ const FAQS = [
   },
   {
     q: 'Why do I have to pay to join or host?',
-    a: 'Small fees (₹50 to join, ₹200 to host) create commitment. They reduce spam listings and no-shows, so everyone who shows up is genuinely interested in jamming.',
+    a: 'Small fees (₹10 to join, ₹50 to host) create commitment. They reduce spam listings and no-shows, so everyone who shows up is genuinely interested in jamming.',
   },
   {
     q: 'When do I get the exact venue address?',
@@ -19,11 +19,11 @@ const FAQS = [
   },
   {
     q: 'What happens if the host cancels?',
-    a: 'All joiners receive a full ₹50 refund. The host\'s ₹200 creation fee is not refunded. Everyone is notified by email.',
+    a: 'Joiners are notified by email. Join fees and the host\'s ₹50 creation fee are not refunded.',
   },
   {
     q: 'Can I leave a jam I already joined?',
-    a: 'Yes. If you cancel your own join, you receive a 50% refund (₹25). Your spot opens up for someone else.',
+    a: 'Yes. You can leave while the jam is still open. Your spot opens for someone else, but the join fee is not refunded.',
   },
   {
     q: 'How does reputation work?',
